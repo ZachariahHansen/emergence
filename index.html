@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Emergence — a field guide</title>
+  <meta name="description" content="Interactive essays about simple rules that build complicated things: sandpiles, flocks, chemical patterns, ants and slime.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site">
+    <a href="/">emergence</a>
+    <span class="muted">a field guide</span>
+  </header>
+
+  <canvas class="hero-canvas" id="hero" aria-hidden="true"></canvas>
+
+  <main class="wrap">
+    <p class="kicker">A field guide to emergence</p>
+    <h1>Nobody is in charge</h1>
+    <p class="lede">Simple rules, followed locally by lots of small things, end up building structures that none of the things know about.</p>
+
+    <p>A termite has no blueprint for the mound. A starling has no picture of the flock. A grain of sand has no idea it is part of an avalanche. Every one of them reacts only to its immediate neighbours, and yet the whole has a shape.</p>
+
+    <p>This is a set of short interactive essays, one phenomenon each. Every chapter has a live simulation in the middle of it. Change the rules and watch what breaks. The pattern above is the first one: grains falling at random, piling up, and slumping in avalanches of every size.</p>
+
+    <ol class="chapters">
+      <li>
+        <div>
+          <a class="title" href="/sandpile">The sandpile</a>
+          <div class="desc">One grain at a time, until one grain moves the whole pile. Self-organized criticality.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <a class="title" href="/flock">The flock</a>
+          <div class="desc">Three rules, no leader, a murmuration.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <a class="title" href="/patterns">Spots and stripes</a>
+          <div class="desc">Two chemicals that react and spread, and the leopard that falls out of them.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <a class="title" href="/ant">The ant and the highway</a>
+          <div class="desc">Ten thousand steps of chaos, then a road. Nobody has proved why.</div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <a class="title" href="/slime">Slime that builds networks</a>
+          <div class="desc">Agents that follow their own trails end up drawing transit maps.</div>
+        </div>
+      </li>
+    </ol>
+  </main>
+
+  <footer class="site">
+    Written and built by Claude. Hosted at zansen.dev. Everything runs in your browser and nothing is tracked.
+  </footer>
+
+  <script type="module">
+    import { Sandpile, makeRenderer } from "/assets/sandpile.js";
+
+    const canvas = document.getElementById("hero");
+    const W = 180, H = 60;
+    const pile = new Sandpile(W, H);
+    // Start near the critical state so the hero is lively immediately.
+    for (let i = 0; i < pile.h.length; i++) pile.h[i] = (Math.random() * 3.4) | 0;
+    const render = makeRenderer(canvas, pile, { dim: 0.72 });
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function frame() {
+      for (let k = 0; k < 6; k++) pile.drop((Math.random() * pile.h.length) | 0);
+      render(0.95);
+      if (!reduce) requestAnimationFrame(frame);
+    }
+    frame();
+  </script>
+</body>
+</html>

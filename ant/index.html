@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The ant and the highway — Emergence</title>
+  <meta name="description" content="An interactive essay on Langton's ant: a two-line rule that makes ten thousand steps of chaos and then builds a road forever, and why nobody can prove it always will.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    .stage { position: relative; }
+    .stage canvas.overlay {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .sim canvas.field.still { cursor: default; touch-action: auto; }
+    .controls select, .controls input[type="text"] {
+      font: inherit; color: var(--ink); background: var(--bg);
+      border: 1px solid var(--rule); border-radius: 4px; padding: 5px 8px;
+      min-width: 0;
+    }
+    .controls input[type="text"] { width: 11rem; max-width: 100%; text-transform: uppercase; }
+    .controls select:focus, .controls input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .sim-note { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); margin: 10px 0 0; }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <a href="/">emergence</a>
+    <span class="muted">chapter 04</span>
+  </header>
+
+  <main class="wrap">
+    <p class="kicker">Chapter 04 · Order after chaos</p>
+    <h1>The ant and the highway</h1>
+    <p class="lede">An ant on a grid follows a rule you can learn in ten seconds. For ten thousand steps it makes a mess. Then it starts building a road, and it never stops.</p>
+
+    <p>In 1986 Chris Langton, a computer scientist who was trying to work out what "artificial life" might mean, described a handful of tiny machines living on grids. One of them is now called <em>Langton's ant</em>. It is about as simple as a program can be and still do something interesting, and forty years later it still holds a question nobody has answered.</p>
+
+    <h2>The rule</h2>
+
+    <p>Take a grid of squares, all white. Put an ant on one square, facing up. At each step the ant looks at the square it is standing on:</p>
+
+    <ul>
+      <li>On a <strong>white</strong> square, it turns 90° to the <strong>right</strong>.</li>
+      <li>On a <strong>black</strong> square, it turns 90° to the <strong>left</strong>.</li>
+    </ul>
+
+    <p>Then it flips the colour of that square, white to black or black to white, and moves forward one square. That's all. There is no randomness anywhere. Run it twice from the same start and you get exactly the same thing twice.</p>
+
+    <div class="legend" aria-label="Colour key">
+      <span><i style="background:var(--h0)"></i>white</span>
+      <span><i style="background:var(--h3)"></i>black</span>
+      <span><i style="background:var(--accent);border-radius:50%"></i>the ant</span>
+    </div>
+  </main>
+
+  <figure class="sim" id="fig-walk">
+    <div class="sim-frame">
+      <div class="stage">
+        <canvas class="field still" id="walk" aria-label="Langton's ant walking on a grid that starts empty."></canvas>
+        <canvas class="overlay" id="walk-over" aria-hidden="true"></canvas>
+      </div>
+      <div class="controls">
+        <button id="w-play" class="primary">Play</button>
+        <button id="w-step">Step</button>
+        <button id="w-ff">+1,000 steps</button>
+        <button id="w-reset">Reset</button>
+        <label>speed <input type="range" id="w-speed" min="0" max="100" value="30"></label>
+      </div>
+      <div class="stats">
+        <div class="stat">step<b id="w-steps">0</b></div>
+        <div class="stat">black squares<b id="w-black">0</b></div>
+        <div class="stat">highway<b id="w-highway">not yet</b></div>
+        <div class="stat">ant<b id="w-status">paused</b></div>
+        <div class="stat">speed<b id="w-rate">1/frame</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 1. A 200 × 200 grid, all white at the start. The ant begins near the top right, because from this start its highway heads down and to the left. The grid does not wrap: when the ant reaches the edge it stops. Use <span class="mono">Step</span> to watch one move at a time, or drag the speed up to a few thousand steps per frame.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <h2>Three acts</h2>
+
+    <p><strong>Simple.</strong> For the first few hundred steps the ant draws small, tidy shapes, often with an obvious symmetry. If you step through them one at a time you can follow its logic and predict the next move without much trouble.</p>
+
+    <p><strong>Chaos.</strong> Then the tidiness goes. The ant builds a ragged, growing blob with no structure you can see. It doubles back over its own trail, erases parts of it, and wanders. This goes on for about ten thousand steps. Nothing about the blob tells you it is about to change.</p>
+
+    <p><strong>The highway.</strong> After about ten thousand steps (<strong>9,977</strong>, to be exact) the ant falls into a cycle. It makes a sequence of 104 moves that leaves it two squares further along a diagonal, facing the same way, with the same pattern of black squares around it, just shifted. Then it does the same 104 moves again. And again. The trail it leaves behind is a striped diagonal band that people call the <em>highway</em>.</p>
+
+    <p>On an infinite empty grid, the highway goes on forever. That part is not a guess: each 104-step cycle only ever runs into fresh white squares, and from fresh white squares it does exactly what it did last time. The marker in Figure 1 shows where the cycle started. The figure finds it by checking, as the ant runs, whether its last few hundred moves were the moves of 104 steps earlier shifted by a constant amount; it raises the marker once that has held for four full cycles.</p>
+
+    <blockquote>The rule says nothing about diagonals, cycles or roads. All of that comes out of the walking.</blockquote>
+
+    <h2>What is proven, and what isn't</h2>
+
+    <p>You might guess that the ant could, from some starting pattern, get stuck forever going round in a small region. It can't. In 1992 Leonid Bunimovich and Serge Troubetzkoy proved that, whatever squares start out black, the ant's path is <strong>unbounded</strong>: it always eventually travels arbitrarily far from where it started. The proof is short and uses a neat fact about the rule. Since the ant turns on every single step, its moves alternate between horizontal and vertical, which constrains how it can enter each square enough to rule out staying trapped.</p>
+
+    <p>But "it goes arbitrarily far" is much weaker than "it builds a highway." The path could, in principle, sprawl outward in some messy way forever. Whether every finite starting pattern eventually leads to a highway is an <strong>open problem</strong>. Every finite pattern anyone has tried has ended in the same 104-step highway. Nobody has a proof that they all do, and nobody has found one that doesn't.</p>
+
+    <p>You can add to the experiments. Paint black squares onto the grid below, before or during a run, or start from a patch of random noise.</p>
+  </main>
+
+  <figure class="sim" id="fig-mess">
+    <div class="sim-frame">
+      <div class="stage">
+        <canvas class="field" id="mess" aria-label="Langton's ant on a grid you can paint on. Click or drag to paint squares."></canvas>
+        <canvas class="overlay" id="mess-over" aria-hidden="true"></canvas>
+      </div>
+      <div class="controls">
+        <button id="m-play" class="primary">Play</button>
+        <button id="m-brush">Brush: black</button>
+        <button id="m-noise">Random patch</button>
+        <button id="m-ant">New ant</button>
+        <button id="m-clear">Clear</button>
+        <label>speed <input type="range" id="m-speed" min="0" max="100" value="55"></label>
+      </div>
+      <div class="stats">
+        <div class="stat">step<b id="m-steps">0</b></div>
+        <div class="stat">highway<b id="m-highway">not yet</b></div>
+        <div class="stat">highways built<b id="m-count">0</b></div>
+        <div class="stat">ant<b id="m-status">paused</b></div>
+        <div class="stat">speed<b id="m-rate">1/frame</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 2. A 160 × 160 grid that starts with a 32 × 32 patch of random noise around the ant. Click or drag to paint. <span class="mono">New ant</span> puts a fresh ant in the centre without erasing anything, so you can paint a pattern first and then release it. As in Figure 1, the ant stops at the edge.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <p>The time it takes varies wildly. A random patch might give a highway after two thousand steps or after forty thousand. A highway that runs into something you painted usually breaks, and the ant goes back to chaos for a while, and then, as far as anyone has seen, it builds another one somewhere else. If you find a pattern on which the ant runs into the edge without ever settling down, that is not a counterexample. The grid is only 160 squares wide, and the conjecture is about an infinite one.</p>
+
+    <h2>More colours</h2>
+
+    <p>There's an obvious way to generalise the ant. Give squares more than two colours, cycling through them in order, and give each colour its own turn. Write the rule as a string of letters, one per colour: Langton's ant is <span class="mono">RL</span>, "turn right on colour 0, left on colour 1." The rule <span class="mono">LLRR</span> has four colours, and so on. Greg Turk and Jim Propp both explored this family, and these creatures are often called <em>turmites</em>.</p>
+
+    <p>The family is extremely varied. Some rules grow patterns with perfect symmetry. Some produce chaos that, as far as anyone has run them, never resolves. Some build highways of their own, with different shapes and much longer periods than 104. You can't tell which by looking at the letters.</p>
+  </main>
+
+  <figure class="sim" id="fig-multi">
+    <div class="sim-frame">
+      <div class="stage">
+        <canvas class="field still" id="multi" aria-label="A multi-colour ant following the chosen rule string."></canvas>
+        <canvas class="overlay" id="multi-over" aria-hidden="true"></canvas>
+      </div>
+      <div class="controls">
+        <label>rule
+          <select id="t-pick">
+            <option value="RL">RL</option>
+            <option value="RLR">RLR</option>
+            <option value="LLRR">LLRR</option>
+            <option value="LRRRRRLLR">LRRRRRLLR</option>
+            <option value="RRLLLRLLLRRR">RRLLLRLLLRRR</option>
+            <option value="LLRRRLRLRLLR">LLRRRLRLRLLR</option>
+            <option value="">your own…</option>
+          </select>
+        </label>
+        <input type="text" id="t-rule" value="LLRR" maxlength="16" spellcheck="false" autocomplete="off" aria-label="Rule string">
+        <button id="t-go">Run rule</button>
+        <button id="t-play" class="primary">Play</button>
+        <label>speed <input type="range" id="t-speed" min="0" max="100" value="65"></label>
+      </div>
+      <p class="sim-note" id="t-note"></p>
+      <div class="legend" id="t-legend" aria-label="Colour key for this rule"></div>
+      <div class="stats">
+        <div class="stat">step<b id="t-steps">0</b></div>
+        <div class="stat">colours<b id="t-colours">4</b></div>
+        <div class="stat">ant<b id="t-status">paused</b></div>
+        <div class="stat">speed<b id="t-rate">1/frame</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 3. A 200 × 200 grid, starting empty, with the ant in the centre. Pick a rule or type your own (2 to 16 letters of R and L) and press <span class="mono">Run rule</span>. Colour 0 is the background; the key shows which way the ant turns on each colour. Some rules take millions of steps to reach the edge, so the speed goes up to 50,000 steps per frame.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <p>A few to try. <span class="mono">LLRR</span> grows a shape that keeps getting bigger and keeps returning, over and over, to exact mirror symmetry. <span class="mono">RLR</span> just grows a chaotic blob. <span class="mono">LRRRRRLLR</span> fills in a square around itself. <span class="mono">RRLLLRLLLRRR</span> builds a solid triangle that crawls across the grid as it grows. <span class="mono">LLRRRLRLRLLR</span> spends about thirty thousand steps in chaos and then builds a broad, intricate highway that, in this simulation, repeats every 1,968 steps.</p>
+
+    <h2>You have to run it</h2>
+
+    <p>Here's the part worth sitting with. You know everything about Langton's ant. The rule fits on a sticky note and there is no hidden state, no noise, nothing left out. And still, if someone asks "when does the highway start?", the only known way to answer is to run the ant for 9,977 steps and watch. Nobody knows a formula that takes the rule and hands you that number. Change one square of the starting pattern and the number usually changes, in no way you can foresee.</p>
+
+    <p>This is a different kind of unpredictability from the sandpile's. The sandpile is unpredictable because it is huge and poised on the edge of collapse. The ant is unpredictable even though it is one creature following one rule, because what it does next depends on everything it has done before. It is not only that we haven't found the shortcut yet. For the ant there is some evidence that no general shortcut exists: in 2002 Anahí Gajardo, Andrés Moreira and Eric Goles showed that, given a suitably prepared starting grid, the ant's trail can be made to compute any Boolean logic circuit. Predicting the ant in general is therefore at least as hard as predicting what an arbitrary circuit will output.</p>
+
+    <p>Stephen Wolfram calls this kind of situation <em>computational irreducibility</em>: a process whose outcome can't be found any faster than by carrying the process out. It's usually very hard to prove that a particular system is irreducible in that strong sense, and nobody has proved it for the ant. But the ant is the cleanest illustration of the idea there is. Knowing the rule completely and knowing what it will do are two different things.</p>
+
+    <h2>The honest caveats</h2>
+
+    <p>Every grid here is finite and the ant stops at the edge, so these figures show the start of a story the mathematics tells about an infinite grid. The highway detector is a check on the ant's recent moves, not a proof, and it only knows about the 104-step highway. The step 9,977 is for an empty grid; on any other start the onset is usually different, and the highway can point along any of the four diagonals.</p>
+
+    <p>And the central claim of the chapter is an observation, not a theorem. In every experiment anyone has published, the ant ends up on a highway. It might be true for every finite start. It might fail on some pattern nobody has tried. For a rule this simple, it is remarkable that we don't know.</p>
+
+    <hr>
+
+    <h2>Try this</h2>
+    <p>Pause Figure 1 just after the highway marker appears, then press <span class="mono">Step</span> 104 times. Watch the ant trace the same little dance, two squares further along, every time. Then go to Figure 2, press <span class="mono">Clear</span>, paint a solid black wall right across the grid, and press <span class="mono">New ant</span>. See whether the highway can get through.</p>
+
+    <p class="next muted">Next: <a href="/slime">Slime that builds networks</a> · <a href="/">All chapters</a></p>
+  </main>
+
+  <footer class="site">
+    Written and built by Claude. References: Langton, <em>Physica D</em> 22, 120 (1986) · Bunimovich &amp; Troubetzkoy, <em>J. Stat. Phys.</em> 67, 289 (1992) · Gale, Propp, Sutherland &amp; Troubetzkoy, <em>Math. Intelligencer</em> 17, 48 (1995) · Gajardo, Moreira &amp; Goles, <em>Discrete Appl. Math.</em> 117, 41 (2002).
+  </footer>
+
+  <script type="module" src="/ant/chapter.js"></script>
+</body>
+</html>

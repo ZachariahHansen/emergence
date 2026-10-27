@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The sandpile — Emergence</title>
+  <meta name="description" content="An interactive essay on the Bak–Tang–Wiesenfeld sandpile: how a pile tunes itself to the edge of collapse, and why its avalanches have no typical size.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <header class="site">
+    <a href="/">emergence</a>
+    <span class="muted">chapter 01</span>
+  </header>
+
+  <main class="wrap">
+    <p class="kicker">Chapter 01 · Self-organized criticality</p>
+    <h1>The sandpile</h1>
+    <p class="lede">Drop sand on a table one grain at a time. Most grains do nothing. Then one of them, no different from the others, moves half the pile.</p>
+
+    <p>In 1987 three physicists, Per Bak, Chao Tang and Kurt Wiesenfeld, wrote down a toy version of this and found something odd in it. Their pile did not need anyone to set it up carefully. Left alone, it drove itself into a state balanced on the edge of collapse and stayed there. They called this <em>self-organized criticality</em>, and for a decade afterwards people saw it everywhere.</p>
+
+    <p>The toy is simple enough to fit in a sentence, so let's build it.</p>
+
+    <h2>The rule</h2>
+
+    <p>Take a grid. Each square holds some grains of sand: zero, one, two or three. When a square gets a fourth grain, it is too tall and it <strong>topples</strong>. It gives one grain to each of its four neighbours and is left with nothing.</p>
+
+    <p>That is the whole rule. A toppling can make a neighbour reach four, which topples too, which can tip its own neighbours, and so on. That chain is an <strong>avalanche</strong>. Grains pushed off the edge of the grid fall off the table and are gone, which is what eventually stops every avalanche.</p>
+
+    <div class="legend" aria-label="Colour key">
+      <span><i style="background:var(--h0)"></i>0 grains</span>
+      <span><i style="background:var(--h1)"></i>1</span>
+      <span><i style="background:var(--h2)"></i>2</span>
+      <span><i style="background:var(--h3)"></i>3</span>
+      <span><i style="background:var(--glow)"></i>just toppled</span>
+    </div>
+  </main>
+
+  <figure class="sim" id="fig-pour">
+    <div class="sim-frame">
+      <canvas class="field" id="pour" aria-label="Sandpile simulation. Click or drag to drop grains."></canvas>
+      <div class="controls">
+        <button id="rain" class="primary">Rain</button>
+        <label>rate <input type="range" id="rate" min="0" max="100" value="20"></label>
+        <button id="ff">+20,000 grains</button>
+        <button id="reset">Clear</button>
+      </div>
+      <div class="stats">
+        <div class="stat">dropped<b id="s-dropped">0</b></div>
+        <div class="stat">grains per square<b id="s-density">0</b></div>
+        <div class="stat">last avalanche<b id="s-last">0</b></div>
+        <div class="stat">biggest<b id="s-biggest">0</b></div>
+        <div class="stat">rain<b id="s-rate">1</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 1. A 64 × 64 table. Grains rain down at random spots. Click or drag on the table to pour grains in one place. Orange marks squares that have just toppled.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <h2>What the pile does on its own</h2>
+
+    <p>At first nothing much happens. The table is nearly empty, a fourth grain almost never lands on a square that already has three, and the few avalanches are tiny. Watch the <span class="mono">grains per square</span> number climb.</p>
+
+    <p>It doesn't climb forever. It levels off at about <strong>2.1</strong> and stays there, wobbling. The pile has found a balance: on average, the grains arriving from above match the grains falling off the edges. Nobody chose 2.1. You can't tune it, and you can't start the pile somewhere else and have it stay there. Pile on extra sand and the avalanches carry it off. Take sand away and the rain fills it back in.</p>
+
+    <p>Once the pile is in this state, look at the avalanches. Most are a single toppling. Some are a dozen. Every so often one tears across the whole table. If you press <span class="mono">+20,000 grains</span> a few times, the chart below starts to fill in.</p>
+  </main>
+
+  <figure class="sim" id="fig-hist">
+    <div class="sim-frame">
+      <canvas class="chart" id="hist" aria-label="Chart of how often avalanches of each size happen, on logarithmic axes."></canvas>
+    </div>
+    <figcaption>Figure 2. How often avalanches of each size happen in Figure 1, on logarithmic axes. Both axes grow by factors of ten. It updates live.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <h2>No typical size</h2>
+
+    <p>On these axes the points fall roughly along a straight line that slopes downward. That shape is a <strong>power law</strong>. In plain terms, it means that every time you make an avalanche ten times bigger, it becomes a fixed number of times rarer, and that holds whether you start at size 1 or size 1,000. There is no scale at which the pattern changes, until you hit the edge of the table.</p>
+
+    <p>This is stranger than it sounds. Most things we measure have a typical size. Adult heights cluster around an average, and a person three times the average height simply does not exist. The sandpile has no average avalanche in any useful sense. The tiny ones and the catastrophic ones come out of the same process, and you cannot tell them apart in advance by looking at the grain that started them.</p>
+
+    <blockquote>The grain that triggers the big avalanche is not special. The pile is.</blockquote>
+
+    <p>Physicists had seen power laws like this before, at <em>critical points</em>: water at the exact temperature and pressure where liquid and gas stop being different, or a magnet at the exact temperature where it loses its magnetism. There, fluctuations of every size appear at once. But you only get there by tuning a dial to precisely the right setting. Be a fraction of a degree off and the effect disappears.</p>
+
+    <p>The sandpile reaches its critical state without anyone touching a dial. Slow driving (one grain at a time) plus a way for sand to leave (the edges) is enough. That is the "self-organized" part, and it is why the idea spread so fast. If critical states could build themselves, maybe that explained why power laws keep showing up in nature, in earthquake sizes, forest fires and solar flares.</p>
+
+    <h2>Order doesn't matter</h2>
+
+    <p>The model has a hidden property that makes it unusually easy to reason about. In 1990 Deepak Dhar showed that the final state does not depend on the order in which squares topple. If two squares are both over the limit, you can topple either one first and you always end up in the same place. Mathematicians call this kind of model <em>abelian</em>.</p>
+
+    <p>That means we can do something dramatic. Instead of raining grains one at a time, put all of them on one square in the middle and let it collapse however it likes.</p>
+  </main>
+
+  <figure class="sim" id="fig-big">
+    <div class="sim-frame">
+      <canvas class="field" id="big" aria-label="A single tall pile of sand collapsing outward into a fractal pattern." style="cursor:default"></canvas>
+      <div class="controls">
+        <label>grains <input type="range" id="big-n" min="10" max="18" step="1" value="15"> <span id="big-n-label" class="mono"></span></label>
+        <button id="big-run" class="primary">Drop them all</button>
+      </div>
+      <div class="stats"><div class="stat">status<b id="big-status">—</b></div></div>
+    </div>
+    <figcaption>Figure 3. Every grain starts on the centre square. The pile spreads until no square holds four or more. The two largest settings take a few seconds.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <p>The result is not a smooth mound. It's an intricate, symmetric pattern of nested triangles and patches, and it looks more like a snowflake or a Persian rug than a heap of sand. Make the pile bigger and the same motifs return at larger scales. Nothing in the rule mentions triangles, so every bit of that geometry comes from the toppling itself.</p>
+
+    <p>Mathematicians are still working on why these patterns look the way they do. Some of the shapes have been explained only in the last fifteen years, through a surprising connection to the geometry of circles packed together. It is a lot of structure to get from "four grains and you fall over."</p>
+
+    <h2>The honest caveats</h2>
+
+    <p>Real sand turned out to be a disappointing sandpile. When experimenters poured actual sand, its grains had momentum. Once a slide started it tended to keep going, so piles alternated between building up and big collapses instead of producing avalanches of every size. The model ignores this because its grains have no momentum at all.</p>
+
+    <p>A better match came, oddly, from rice. In 1996 a group in Oslo slowly fed long-grained rice into a narrow pile between two glass plates and found avalanches with the scale-free behaviour the model predicts. The shape of the grains, which let them jam and catch on one another, turned out to matter.</p>
+
+    <p>The broader claims also outran the evidence for a while. Self-organized criticality was proposed as an explanation for earthquakes, extinctions, traffic, wars and stock markets. A straight line on a log–log plot is easy to see and hard to prove, and many claimed power laws later looked like other distributions once the data were examined carefully. The idea survives as a useful lens, not as a theory of everything.</p>
+
+    <p>What survives without caveats is the core lesson of the toy. A system made of identical parts, each obeying a dull local rule, can organise itself into a state where its own future is radically uncertain. Small causes have effects of every size. No grain is in charge of that, and no grain can see it.</p>
+
+    <hr>
+
+    <h2>Try this</h2>
+    <p>Clear Figure 1 and pour every grain into a single square by holding down on it. You'll grow a small version of Figure 3, with the same geometry. Then turn the rain on and watch the random sand slowly erase it.</p>
+
+    <p class="next muted">Next: <a href="/flock">The flock</a> · <a href="/">All chapters</a></p>
+  </main>
+
+  <footer class="site">
+    Written and built by Claude. References: Bak, Tang &amp; Wiesenfeld, <em>Phys. Rev. Lett.</em> 59, 381 (1987) · Dhar, <em>Phys. Rev. Lett.</em> 64, 1613 (1990) · Frette et al., <em>Nature</em> 379, 49 (1996).
+  </footer>
+
+  <script type="module" src="/sandpile/chapter.js"></script>
+</body>
+</html>

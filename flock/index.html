@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The flock — Emergence</title>
+  <meta name="description" content="An interactive essay on Craig Reynolds' boids: how three local rules, with no leader and no map, make a flock, and what real starlings do differently.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    /* vector canvases: smooth, not pixelated */
+    .sim canvas.vec { image-rendering: auto; background: var(--bg); }
+    .sim canvas.chart.order { height: 150px; margin-top: 12px; }
+    .controls .val { min-width: 2.2em; color: var(--ink); }
+    .controls input[type="checkbox"] { accent-color: var(--accent); margin: 0; }
+    button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <a href="/">emergence</a>
+    <span class="muted">chapter 02</span>
+  </header>
+
+  <main class="wrap">
+    <p class="kicker">Chapter 02 · Collective motion</p>
+    <h1>The flock</h1>
+    <p class="lede">At dusk, thousands of starlings turn together across the sky as if one animal were steering. None of them is.</p>
+
+    <p>In 1987 Craig Reynolds, a computer graphics researcher, wanted to animate a flock of birds. Scripting the path of every bird by hand would have been hopeless, and scripting the flock as one object would have looked wrong. So he did something that seemed backwards at the time. He wrote a small program for a single bird, made a few hundred copies, and let them loose.</p>
+
+    <p>He called his birds <em>boids</em>. Each boid knows only what is happening close by. It has no idea how big the flock is, what shape it is, or where it is going. There is no leader to follow. And yet, put enough of them together and a flock appears.</p>
+
+    <h2>Three rules</h2>
+
+    <p>Every boid looks at the other boids within a short distance of itself, its <strong>neighbours</strong>, and adjusts its own heading a little, according to three rules:</p>
+
+    <p><strong>Separation.</strong> Steer away from neighbours that are too close, so you don't collide.<br>
+    <strong>Alignment.</strong> Steer toward the average direction your neighbours are flying.<br>
+    <strong>Cohesion.</strong> Steer toward the average position of your neighbours, so you don't get left behind.</p>
+
+    <p>Reynolds called these collision avoidance, velocity matching and flock centering; the shorter names came later. Each rule produces a small push, the pushes are weighted and added up, and the boid turns by that much. Then every boid moves a step forward and the whole thing repeats.</p>
+
+    <p>Notice what is missing. None of the rules mentions the flock. "The average of your neighbours" is a local quantity: a boid on one side of the flock has a completely different set of neighbours from a boid on the other side, and neither one knows about the other.</p>
+
+    <div class="legend" aria-label="Colour key">
+      <span><i style="background:var(--ink)"></i>boid</span>
+      <span><i style="background:var(--accent)"></i>one chosen boid</span>
+      <span><i style="background:var(--glow)"></i>its neighbours</span>
+    </div>
+  </main>
+
+  <figure class="sim" id="fig-flock">
+    <div class="sim-frame">
+      <canvas class="field vec" id="flock" aria-label="A flock of 300 boids. Move the pointer, or touch, to chase them."></canvas>
+      <div class="controls">
+        <button id="play" class="primary">Play</button>
+        <button id="scatter">Scatter</button>
+        <button id="defaults">Reset rules</button>
+      </div>
+      <div class="controls">
+        <label>separation <input type="range" id="w-sep" min="0" max="3" step="0.1" value="1.5"> <span class="val mono" id="w-sep-v"></span></label>
+        <label>alignment <input type="range" id="w-ali" min="0" max="3" step="0.1" value="1"> <span class="val mono" id="w-ali-v"></span></label>
+        <label>cohesion <input type="range" id="w-coh" min="0" max="3" step="0.1" value="1"> <span class="val mono" id="w-coh-v"></span></label>
+        <label>radius <input type="range" id="w-rad" min="10" max="120" step="1" value="50"> <span class="val mono" id="w-rad-v"></span></label>
+      </div>
+      <div class="controls">
+        <button id="topo" aria-pressed="false">neighbours: within radius</button>
+        <label><input type="checkbox" id="focus" checked> show one boid's neighbours</label>
+      </div>
+      <div class="stats">
+        <div class="stat">boids<b>300</b></div>
+        <div class="stat">neighbours each<b id="f-nbrs">0</b></div>
+        <div class="stat">alignment<b id="f-order">0</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 1. Three hundred boids on a square whose edges wrap around: fly off the right and you come back on the left. The sliders set how strongly each rule pulls, and how far a boid can see. The orange boid's circle is everything it knows about. Your pointer, or your finger, is a predator: the boids that notice it flee.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <h2>Take a rule away</h2>
+
+    <p>The boids start out scattered, pointing every which way. Within a few seconds they gather into groups, the groups line up, and groups that meet merge. Nothing told them to do this. Each one only ever turned a little toward its neighbours.</p>
+
+    <p>The best way to see what each rule is for is to switch it off by dragging its slider to zero.</p>
+
+    <p><strong>No cohesion.</strong> The boids still line up with each other and still keep their distance, so they fly in loose parallel streams. But nothing pulls them together, and when a stream frays, nothing pulls it back. The flock thins out and spreads across the space, and <span class="mono">neighbours each</span> drops.</p>
+
+    <p><strong>No alignment.</strong> Now the boids want to be near each other but have no reason to fly the same way. They collect into restless blobs that churn in place, like a swarm of gnats. The <span class="mono">alignment</span> number, which we'll come back to, drops close to zero.</p>
+
+    <p><strong>No separation.</strong> Cohesion wins unopposed. Each group collapses into a tight knot, every boid nearly on top of the others, and the knots eat each other until there's essentially one. Watch <span class="mono">neighbours each</span> climb toward 300: everyone can see everyone.</p>
+
+    <p>So each rule does one job, and the flock exists only in the balance between them. Separation and cohesion fight over spacing, and the spacing you see is where they cancel. Alignment is what turns a crowd into something that moves.</p>
+
+    <p>The radius matters too. Shrink it to 10 or 15 and boids barely see each other. They form only small groups, or none. Push it to the top and every boid sees a large part of the world, so the flock becomes one big, slow, very orderly mass.</p>
+
+    <h2>No leader, no map</h2>
+
+    <p>Now chase the flock. When you approach, only the boids near the pointer can see you. They turn away. Their neighbours don't see you at all, but they see the first boids turning, and alignment makes them turn too. Their neighbours see <em>them</em>. A wave of turning passes through the flock faster than any single boid could warn the others, and the flock splits and flows around you.</p>
+
+    <p>That is the important idea in this chapter. The flock behaves as if it had a plan, but the plan isn't stored anywhere. No boid carries a picture of the flock's shape. The shape is just what you get when each boid keeps making small corrections based on a handful of others, and the corrections spread.</p>
+
+    <blockquote>The flock is not something the boids build. It is something they keep doing.</blockquote>
+
+    <h2>Measuring order</h2>
+
+    <p>To talk about flocks more precisely we need a number. Here's a simple one. Give every boid an arrow of length one pointing the way it flies, and average all the arrows. If everyone flies the same way, the arrows add up and the average has length 1. If they point in random directions, they mostly cancel and the average is close to 0. Physicists call this kind of number an <strong>order parameter</strong>, and it's the <span class="mono">alignment</span> figure under Figure 1.</p>
+
+    <p>In 1995 the physicist Tamás Vicsek and his colleagues stripped the boid down even further. Their particles all move at the same constant speed. There's no separation and no cohesion, only alignment: at each step a particle takes the average heading of everything within a fixed distance, including itself. Then they added one more ingredient, <strong>noise</strong>. Each particle's new heading gets a random nudge, as if it couldn't quite judge where its neighbours were going.</p>
+  </main>
+
+  <figure class="sim" id="fig-vicsek">
+    <div class="sim-frame">
+      <canvas class="field vec" id="vicsek" aria-label="Vicsek model: 500 particles moving at constant speed, aligning with their neighbours under adjustable noise."></canvas>
+      <canvas class="chart order" id="order" aria-label="Order parameter over time, from 0 (disordered) to 1 (everyone aligned)."></canvas>
+      <div class="controls">
+        <button id="v-play" class="primary">Play</button>
+        <button id="v-scatter">Randomise</button>
+        <label>noise <input type="range" id="eta" min="0" max="6.28" step="0.01" value="0.5"> <span class="val mono" id="eta-v"></span></label>
+      </div>
+      <div class="stats">
+        <div class="stat">particles<b>500</b></div>
+        <div class="stat">order<b id="v-order">—</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 2. The Vicsek model. Each stroke is a particle; the dot is its front. The chart shows the order parameter over time (solid orange) and the noise setting (dashed, on a scale where the top means the largest kick, a random turn of up to half a circle either way).</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <p>With low noise, the particles start random and gradually agree. Small aligned patches form, collide, and settle their differences, until the whole box is drifting one way and the order parameter sits near 1. Nobody chose the direction. It is whichever way the patches happened to tip, and if you press <span class="mono">Randomise</span> it will usually come out different.</p>
+
+    <p>Now raise the noise slowly. For a while the order wobbles but holds. Somewhere in the middle of the range it gives way, and the particles go back to milling about with an order parameter near zero. Turn the noise back down and order returns. The change from one kind of collective behaviour to the other happens over a fairly narrow range of noise. That is a <strong>phase transition</strong>, like water freezing, except that it happens in a system of moving, self-propelled things rather than molecules sitting in equilibrium.</p>
+
+    <p>This turned out to be more than a curiosity. Physicists knew that the closest equilibrium analogue, a sheet of tiny magnets that each try to point like their neighbours, cannot settle into true long-range order in two dimensions; random jiggling always wins at large enough scales. The same year as Vicsek's paper, John Toner and Yuhai Tu showed why flocks escape that limit. Because the particles move, they keep swapping neighbours, and that carries information across the flock far more effectively than a fixed lattice can. Motion itself helps hold the order together.</p>
+
+    <h2>What real starlings do</h2>
+
+    <p>Boids, and Vicsek's particles, find their neighbours by distance: everyone within a fixed radius counts. It is the obvious choice, but is it what birds do?</p>
+
+    <p>In 2008 a team led by Michele Ballerini and Andrea Cavagna in Rome answered this for real flocks. They photographed starling flocks over the city with several synchronised cameras, reconstructed the three-dimensional position of each bird, and measured how each bird's position related to the others around it. The answer was that each starling interacts with a roughly fixed <em>number</em> of neighbours, about six or seven, no matter how far away they are. When a flock is dense, those six or seven are close. When it spreads out, they are farther away, and the bird still tracks them.</p>
+
+    <p>They called this a <strong>topological</strong> interaction, as opposed to a <strong>metric</strong> one based on distance. And they pointed out why it might matter. A flock under attack by a falcon stretches, splits and compresses. With a metric rule, a bird whose neighbours drift beyond its radius suddenly has nobody to follow and is lost. With a topological rule, it always has six or seven birds to follow, wherever they are, so the flock holds together through big changes in density.</p>
+
+    <p>You can try this in Figure 1. First drag the radius down to about 15. Boids now notice each other only when they are nearly touching, <span class="mono">neighbours each</span> falls below one, and the flock loosens into stragglers that mostly fly alone. Now press <span class="mono">neighbours: within radius</span> to switch to "nearest 7". The orange boid's circle stretches to reach its seventh-nearest neighbour, wherever that is, the neighbour count locks at 7, and within a few seconds the stragglers pull back into a flock.</p>
+
+    <p>One thing the toggle also shows: with only seven neighbours each, a flock here sometimes splits into a few separate groups flying side by side, because every boid's seven nearest can end up inside its own group. A rule that is robust to stretching is not automatically robust to everything.</p>
+
+    <p>The same Rome group later found something else that ties back to the sandpile chapter. In starling flocks, the way one bird's change of heading is correlated with others' doesn't fade over a fixed distance. It reaches across the whole flock, however big the flock is. Like the sandpile's avalanches, the correlations have no typical size. A disturbance that starts with a few birds at one edge can be felt at the other.</p>
+
+    <h2>Boids in the movies</h2>
+
+    <p>Reynolds wasn't trying to do biology. He was trying to make pictures, and boids were quickly put to work. Tim Burton's <em>Batman Returns</em> (1992) used techniques based on Reynolds' model for its swarms of bats and its marching army of penguins. Since then, the same idea, autonomous agents each following simple steering rules, has become a standard tool for animating crowds, herds and schools of fish in films and games. It is often far easier to give a thousand characters a few good rules than to tell each one where to go.</p>
+
+    <h2>The honest caveats</h2>
+
+    <p>A boid flock that looks right is not evidence that birds follow these three rules. Reynolds tuned his model by eye, for animation, and many different rule sets produce something that looks like a flock. Real birds fly in three dimensions, have momentum, see mostly to the front and sides, and react with delays. Real flocks also have edges that behave differently from their middles. The question of which rules real animals actually use is answered by measuring them, as the Rome group did, not by watching simulations.</p>
+
+    <p>The model on this page is also a simplification of Reynolds' own. It is flat, its world wraps around instead of having walls, its boids see in every direction equally, and a neighbour counts fully or not at all instead of fading out with distance. The weights and speeds were chosen to make the behaviour easy to see, not to match any species.</p>
+
+    <p>And "topological" does not mean a starling counts to seven. It means that six or seven is what the data are consistent with. The mechanism behind it, perhaps something about how much of its field of view a bird can attend to, is a separate question.</p>
+
+    <p>What survives all of this is the main point. Large, coordinated, apparently purposeful motion does not need a leader or a plan. It can come from many individuals each paying attention to a few others, and the coordination lives in the connections between them rather than in any one of them.</p>
+
+    <hr>
+
+    <h2>Try this</h2>
+    <p>In Figure 1, set alignment to zero and wait for the boids to settle into churning blobs. Then slowly bring alignment back up. Watch for the moment a blob stops churning and leaves. That moment is a small version of the transition in Figure 2.</p>
+
+    <p class="next muted">Next: <a href="/patterns">Spots and stripes</a> · <a href="/">All chapters</a></p>
+  </main>
+
+  <footer class="site">
+    Written and built by Claude. References: Reynolds, <em>Computer Graphics</em> (SIGGRAPH '87) 21(4), 25 (1987) · Vicsek et al., <em>Phys. Rev. Lett.</em> 75, 1226 (1995) · Toner &amp; Tu, <em>Phys. Rev. Lett.</em> 75, 4326 (1995) · Ballerini et al., <em>PNAS</em> 105, 1232 (2008) · Cavagna et al., <em>PNAS</em> 107, 11865 (2010).
+  </footer>
+
+  <script type="module" src="/flock/chapter.js"></script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spots and stripes — Emergence</title>
+  <meta name="description" content="An interactive essay on reaction–diffusion: Alan Turing's idea that two spreading chemicals can paint spots and stripes, explored with the Gray–Scott model.">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    #rd, #map { image-rendering: auto; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+    .presets button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+    .controls input[type="range"].wide-range { width: 140px; }
+
+    .map-wrap { position: relative; }
+    .map-wrap .field { cursor: pointer; }
+    .map-dot, .map-mark {
+      position: absolute; pointer-events: none; transform: translate(-50%, -50%);
+      font-family: var(--mono); line-height: 1;
+    }
+    .map-dot {
+      width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+      font-size: 0.6rem; color: var(--ink); background: var(--surface);
+      border: 1px solid var(--rule); opacity: 0.85;
+    }
+    .map-mark {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid var(--accent); box-shadow: 0 0 0 2px var(--bg);
+    }
+    .map-axis {
+      display: flex; justify-content: space-between; gap: 8px; margin-top: 6px;
+      font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+    }
+    .map-axis.top { margin: 0 0 6px; }
+    #line { height: 200px; }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <a href="/">emergence</a>
+    <span class="muted">chapter 03</span>
+  </header>
+
+  <main class="wrap">
+    <p class="kicker">Chapter 03 · Reaction–diffusion</p>
+    <h1>Spots and stripes</h1>
+    <p class="lede">Pour two chemicals into a dish and let them spread. You would expect them to blend into an even grey. Under the right conditions, they paint spots instead.</p>
+
+    <p>In 1952 Alan Turing, better known for code-breaking and the foundations of computing, published a paper called <em>The Chemical Basis of Morphogenesis</em>. It asked how an embryo, which starts as a roughly uniform ball of cells, comes to have structure: a head at one end, five fingers rather than a paddle, stripes on a skin. Turing coined the word <em>morphogen</em> for a chemical that could carry that kind of information, and then showed something nobody expected. A few morphogens that react with one another and spread through tissue can break a perfectly even starting state into a regular pattern, all on their own.</p>
+
+    <p>The ingredient that makes this possible is diffusion, the random spreading of molecules from where they are crowded to where they are scarce. That is odd, because diffusion is the great smoother. It is why a drop of ink fades into a glass of water. Turing's insight was that two smoothers working at different speeds can do the opposite.</p>
+
+    <p>First, the effect.</p>
+
+    <div class="legend" aria-label="Colour key">
+      <span><i style="background:var(--h0)"></i>no V</span>
+      <span><i style="background:var(--h1)"></i>a little</span>
+      <span><i style="background:var(--h2)"></i>more</span>
+      <span><i style="background:var(--h3)"></i>most V</span>
+      <span><i style="background:var(--glow)"></i>V growing</span>
+    </div>
+  </main>
+
+  <figure class="sim" id="fig-dish">
+    <div class="sim-frame">
+      <canvas class="field" id="rd" aria-label="Reaction–diffusion simulation. Click or drag to add chemical V."></canvas>
+      <div class="controls">
+        <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+      </div>
+      <div class="controls">
+        <button id="rd-run" class="primary">Run</button>
+        <button id="rd-reset">Reseed</button>
+        <button id="rd-clear">Clear</button>
+      </div>
+      <div class="controls">
+        <label>feed <input type="range" class="wide-range" id="feed" min="0.005" max="0.09" step="0.0001" value="0.0367"></label>
+        <label>kill <input type="range" class="wide-range" id="kill" min="0.035" max="0.07" step="0.0001" value="0.0649"></label>
+      </div>
+      <div class="stats">
+        <div class="stat">feed F<b id="s-feed">—</b></div>
+        <div class="stat">kill k<b id="s-kill">—</b></div>
+        <div class="stat">pattern<b id="s-name">—</b></div>
+        <div class="stat">steps<b id="s-steps">0</b></div>
+        <div class="stat">grid<b id="s-engine">—</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 1. A dish of chemical U with a few drops of chemical V, running the Gray–Scott model. Colour shows how much V there is. Click or drag to add more V. The buttons load parameter settings that produce different patterns; the sliders let you wander between them. The dish wraps around at its edges.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <p>On the default setting, <span class="mono">Mitosis</span>, each drop swells into a spot, the spot stretches, pinches in the middle and splits in two, and the daughters drift apart and split again until the dish is full. Nothing in the simulation knows what a spot is. Try <span class="mono">Maze</span> and the same drops grow into winding stripes instead, which fill the dish like the folds of a brain coral.</p>
+
+    <h2>Two chemicals</h2>
+
+    <p>The model behind Figure 1 comes from chemistry. Peter Gray and Stephen Scott studied it in the 1980s as a reaction in a stirred tank, and in 1993 John Pearson put it on a grid, let the chemicals spread, and catalogued the surprising variety of patterns it makes. It is not a model of any animal, just one of the simplest systems that shows the effect.</p>
+
+    <p>There are two chemicals, <strong>U</strong> and <strong>V</strong>, and three things happen at every point of the dish:</p>
+
+    <p><strong>V feeds on U and makes more of itself.</strong> When one U meets two V, it becomes a third V: U + 2V → 3V. Because the reaction needs two V's to make one more, it is <em>autocatalytic</em>. Wherever V is common, V grows faster still.</p>
+
+    <p><strong>Fresh U is fed in</strong> at a steady rate, the <em>feed</em> F, topping each point back up toward full.</p>
+
+    <p><strong>V is removed</strong> at a steady rate, the <em>kill</em> k, plus the feed rate (as if the dish were being drained as it is refilled). Left alone, V dies out.</p>
+
+    <p>And both chemicals spread to their neighbours. In this simulation U spreads twice as fast as V. Each square of the grid looks only at itself and its eight neighbours. That is the whole model.</p>
+
+    <p>Small changes in F and k give spots, stripes, coral, worms or ripples that never settle. Most settings give nothing at all. The next figure is a map of which is which.</p>
+  </main>
+
+  <figure class="sim" id="fig-map">
+    <div class="sim-frame">
+      <div class="map-axis top"><span>feed F = 0.08</span><span>↑ more feed</span></div>
+      <div class="map-wrap">
+        <canvas class="field" id="map" aria-label="Map of the Gray–Scott model. Kill rate increases to the right, feed rate increases upward. Click a point to load it into Figure 1."></canvas>
+        <div id="map-dots"></div>
+        <span class="map-mark" id="map-mark" aria-hidden="true"></span>
+      </div>
+      <div class="map-axis"><span>F = 0, k = 0.040</span><span>more kill →</span><span>k = 0.070</span></div>
+      <div class="controls">
+        <button id="map-regrow">Regrow</button>
+      </div>
+      <div class="stats">
+        <div class="stat">under pointer<b id="m-here">—</b></div>
+        <div class="stat">sent to Figure 1<b id="m-loaded">—</b></div>
+        <div class="stat">map<b id="m-status">—</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 2. One big dish in which the settings change from place to place: the kill rate k grows from left to right and the feed rate F from bottom to top. Lettered dots mark the presets in Figure 1, and the ring marks Figure 1's current setting. Click anywhere to send that setting to Figure 1. Neighbouring regions leak into each other a little, so treat the borders as rough.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <p>Most of the map is flat. On the left, where the kill rate is low, V survives everywhere and settles into an even wash. On the right and along the bottom, V is removed faster than it can grow, and only U is left. The patterns live in a narrow band between those two fates, running from the lower left toward the upper right, where V can only just hold on. There, a small difference in F or k is the difference between spots and stripes.</p>
+
+    <p>Click along that band and watch Figure 1 change character. Near its lower end you'll find restless, travelling waves. Further up come mazes and coral, and along the band's right-hand edge, where V is closest to dying out, spots that divide, lone spots and short worms.</p>
+
+    <h2>Why spreading makes pattern</h2>
+
+    <p>Turing's argument needs two ingredients. Call them an <strong>activator</strong> and an <strong>inhibitor</strong>. The activator makes more of itself, and it also makes the inhibitor. The inhibitor suppresses the activator. On their own, without any spreading, the two settle into a steady balance.</p>
+
+    <p>Now let them spread, and make the inhibitor spread faster. Suppose that by chance one spot gets a little extra activator. It makes more activator, so the bump grows. It also makes extra inhibitor, but that inhibitor diffuses away quickly, so it does little to stop the bump at its centre. Instead it lands in a ring around the bump and suppresses the activator there. The result is a peak with a moat around it. Beyond the moat, another peak can form, with its own moat. The spacing between peaks is set by how far the inhibitor travels, not by the size of the dish.</p>
+
+    <blockquote>Short-range activation, long-range inhibition.</blockquote>
+
+    <p>That is the usual one-line summary. Alfred Gierer and Hans Meinhardt worked the idea out in general form in 1972, independently of the details of any particular chemistry.</p>
+
+    <p>If the inhibitor spreads as slowly as the activator, it stays on top of every bump and flattens it, and diffusion does what you'd expect: it smooths. The pattern exists only because the two speeds differ. Figure 3 lets you check this in one dimension, with an activator–inhibitor pair of the kind Gierer and Meinhardt used.</p>
+  </main>
+
+  <figure class="sim" id="fig-line">
+    <div class="sim-frame">
+      <canvas class="chart" id="line" aria-label="Chart of activator and inhibitor levels along a line of cells."></canvas>
+      <div class="controls">
+        <label>inhibitor speed <input type="range" id="ratio" min="1" max="60" step="1" value="40"></label>
+        <button id="line-run" class="primary">Run</button>
+        <button id="line-stir">Stir</button>
+      </div>
+      <div class="stats">
+        <div class="stat">speed ratio<b id="l-ratio">—</b></div>
+        <div class="stat">peaks<b id="l-peaks">—</b></div>
+      </div>
+    </div>
+    <figcaption>Figure 3. A row of 160 cells, starting almost flat with a little random noise. The solid line is the activator, the dashed line the inhibitor; the faint line marks the even balance they would sit at without diffusion. Below a ratio of about 12, any bumps die away. Above it, the row breaks into evenly spaced peaks. <span class="mono">Stir</span> starts over from noise.</figcaption>
+  </figure>
+
+  <main class="wrap">
+    <p>Drag the slider down to 1 and the peaks melt back into a flat line. Push it past about 12 and they return, and their number comes out about the same whatever the random start. The chemistry has not changed at all, only how fast one of the two chemicals moves.</p>
+
+    <p>In Gray–Scott the roles are slightly disguised. V is the activator, since it makes itself. U plays the inhibitor's part, by its absence: wherever V grows, it eats up the local U and starves itself, and because U spreads faster, the shortage is felt over a wider area. That's why the model needs U to diffuse faster than V.</p>
+
+    <h2>Leopards, zebras and fish</h2>
+
+    <p>The obvious place to look for Turing patterns is on animals. In the 1980s the mathematical biologist James Murray ran reaction–diffusion models on surfaces shaped like animal skins and found many familiar coats, and that the shape matters. On a narrow surface there is only room for stripes running across it, so his model predicted that a spotted animal could have a striped tail but not the reverse, which roughly matches what is seen in big cats.</p>
+
+    <p>One of the most striking tests came from fish. In 1995 Shigeru Kondo and Rihito Asai watched the stripes of the marine angelfish <em>Pomacanthus</em> as the fish grew. Instead of stretching, the stripes split and new ones appeared between them, keeping the spacing roughly constant. That is what a Turing mechanism predicts, and not what you'd expect if the pattern were simply drawn on once and enlarged.</p>
+
+    <h2>The honest caveats</h2>
+
+    <p>Looking like a Turing pattern is not proof of one. Plenty of other processes make spots and stripes, and many famous patterns in biology turned out to work differently. The stripes of gene activity that lay out the body segments of a fruit-fly embryo, for example, are read off from chemical gradients laid down by the mother, through a cascade of genes switching each other on and off. In zebrafish, the stripes arise mostly from pigment cells touching and signalling to one another directly rather than from freely diffusing chemicals, though the logic of local activation and longer-range inhibition seems to survive in a different form.</p>
+
+    <p>Turing himself did not live to see his mechanism observed. He died in 1954. The first clear laboratory demonstration came in 1990, when Vincent Castets, Étiennette Dulos, Jacques Boissonade and Patrick De Kepper ran a reaction known as CIMA (chlorite, iodide and malonic acid) in a thin gel, fed from the sides, and saw a stationary pattern of spots appear. It had taken nearly forty years, partly because real inhibitors rarely diffuse much faster than their activators.</p>
+
+    <p>In living tissue the evidence is strongest where experiments can change the mechanism and predict the result. In 2012 Rushikesh Sheth and colleagues worked with mice that already lacked a gene called <em>Gli3</em> and so had extra digits. Removing copies of certain Hox genes as well gave still more digits, each thinner and more closely packed, which is what you'd expect if the digits were laid out by a Turing-type mechanism whose wavelength those genes help set. Even there, the full picture involves several interacting molecules, growth of the limb and other signals.</p>
+
+    <p>So the fair summary is this. Turing found a real and general way for structure to come from uniformity. It is confirmed in chemistry and supported in some living systems, and it is one tool among several that development uses, not the master key to every coat and shell. What it shows beyond doubt is that pattern does not need a blueprint. Each square of tissue minding only its own chemistry and its neighbours can lay down a regular design that no single square contains.</p>
+
+    <hr>
+
+    <h2>Try this</h2>
+    <p>Choose <span class="mono">Mitosis</span> in Figure 1, press <span class="mono">Clear</span>, and write a letter on the blank dish with your finger or the mouse. Each stroke breaks into spots that multiply until they fill the dish. Then pick <span class="mono">Coral</span>, clear the dish and write it again: this time the letter grows branches instead.</p>
+
+    <p class="next muted">Next: <a href="/ant">The ant and the highway</a> · <a href="/">All chapters</a></p>
+  </main>
+
+  <footer class="site">
+    Written and built by Claude. References: Turing, <em>Phil. Trans. R. Soc. B</em> 237, 37–72 (1952) · Gierer &amp; Meinhardt, <em>Kybernetik</em> 12, 30 (1972) · Castets, Dulos, Boissonade &amp; De Kepper, <em>Phys. Rev. Lett.</em> 64, 2953 (1990) · Pearson, <em>Science</em> 261, 189 (1993) · Kondo &amp; Asai, <em>Nature</em> 376, 765 (1995) · Nakamasu et al., <em>PNAS</em> 106, 8429 (2009) · Sheth et al., <em>Science</em> 338, 1476 (2012) · Murray, <em>Mathematical Biology</em> (Springer).
+  </footer>
+
+  <script type="module" src="/patterns/chapter.js"></script>
+</body>
+</html>
