@@ -1,8 +1,7 @@
 import { Ant, parseRule } from "/assets/ant.js";
 import { cellAt } from "/assets/sandpile.js";
 import { readPalette, onPaletteChange, mix, css } from "/assets/palette.js";
-
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+import { reduceMotion, animate, announce, valueText, keyCursor } from "/assets/a11y.js";
 const fmt = (x) => Math.round(x).toLocaleString("en-US");
 const $ = (id) => document.getElementById(id);
 
@@ -143,7 +142,7 @@ function countNonzero(cells) {
   const ant = new Ant(N);
   const field = makeField(canvas, $("walk-over"), ant);
   const hw = { onset: -1, count: 0 };
-  let playing = false, visible = false, started = false;
+  let playing = false, started = false;
 
   // Start near the top right: from an empty grid this ant's highway heads down and to the left.
   function restart() {
@@ -183,27 +182,24 @@ function countNonzero(cells) {
   $("w-ff").addEventListener("click", () => { advance(1000); started = true; stats(); });
   $("w-reset").addEventListener("click", () => { restart(); setPlay(false); stats(); });
   $("w-speed").addEventListener("input", stats);
+  valueText($("w-speed"), () => fmt(perFrame($("w-speed"), 10000)) + " steps per frame");
 
   let frameNo = 0;
-  function frame() {
-    if (visible) {
-      if (playing) advance(perFrame($("w-speed"), 10000));
-      field.draw();
-      if (playing && ++frameNo % 6 === 0) stats();
-    }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible) field.invalidate();
-    if (visible && !started && !reduceMotion) { started = true; setPlay(true); }
-  }).observe(canvas);
+  animate(canvas, () => {
+    if (playing) advance(perFrame($("w-speed"), 10000));
+    field.draw();
+    if (playing && ++frameNo % 6 === 0) stats();
+  }, (shown) => {
+    if (shown) field.invalidate();
+    if (shown && !started && !reduceMotion) { started = true; setPlay(true); }
+  });
 
   restart();
+  // With reduced motion, open on the finished story: chaos, then the highway leaving it.
+  if (reduceMotion) advance(11500);
   setPlay(false);
   stats();
-  frame();
+  field.draw();
 }
 
 /* ---------------- Figure 2: mess it up ---------------- */
@@ -214,7 +210,7 @@ function countNonzero(cells) {
   const ant = new Ant(N);
   const field = makeField(canvas, $("mess-over"), ant);
   const hw = { onset: -1, count: 0 };
-  let playing = false, visible = false, started = false, black = true, last = -1;
+  let playing = false, started = false, black = true, last = -1;
 
   function newAnt() {
     ant.reset();
@@ -284,6 +280,15 @@ function countNonzero(cells) {
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
 
+  // Keyboard: arrows move a cursor; hold Enter or Space to paint while moving.
+  const kcell = (x, y) => Math.floor(y * N) * N + Math.floor(x * N);
+  keyCursor(canvas, {
+    step: 2 / N,
+    onPress(x, y) { last = kcell(x, y); dab(last); },
+    onMove(x, y, held) { if (held) { const c = kcell(x, y); stroke(last, c); last = c; } },
+    onRelease() { last = -1; announce("Painted " + (black ? "black" : "white") + "."); },
+  });
+
   $("m-play").addEventListener("click", () => { setPlay(!playing); started = true; stats(); });
   $("m-brush").addEventListener("click", () => {
     black = !black;
@@ -293,27 +298,25 @@ function countNonzero(cells) {
   $("m-noise").addEventListener("click", () => { randomPatch(); started = true; setPlay(true); stats(); });
   $("m-clear").addEventListener("click", () => { ant.cells.fill(0); newAnt(); setPlay(false); stats(); });
   $("m-speed").addEventListener("input", stats);
+  valueText($("m-speed"), () => fmt(perFrame($("m-speed"), 10000)) + " steps per frame");
 
   let frameNo = 0;
-  function frame() {
-    if (visible) {
-      if (playing) advance(perFrame($("m-speed"), 10000));
-      field.draw();
-      if (++frameNo % 6 === 0) stats();
-    }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible) field.invalidate();
-    if (visible && !started && !reduceMotion) { started = true; setPlay(true); }
-  }).observe(canvas);
+  animate(canvas, () => {
+    if (playing) advance(perFrame($("m-speed"), 10000));
+    field.draw();
+    if (++frameNo % 6 === 0) stats();
+  }, (shown) => {
+    if (shown) field.invalidate();
+    if (shown && !started && !reduceMotion) { started = true; setPlay(true); }
+  });
 
   randomPatch();
+  // With reduced motion, show the ant after it has worked its way out of the noise:
+  // run until a highway appears (or a few thousand steps), stopping short of the edge where we can.
+  if (reduceMotion) while (!ant.halted && ant.highwayFrom < 0 && ant.steps < 6000) advance(100);
   setPlay(false);
   stats();
-  frame();
+  field.draw();
 }
 
 /* ---------------- Figure 3: more colours, more turns ---------------- */
@@ -324,7 +327,7 @@ function countNonzero(cells) {
   const ant = new Ant(N, "LLRR", { period: 0 });
   const field = makeField(canvas, $("multi-over"), ant);
   const input = $("t-rule"), pick = $("t-pick"), note = $("t-note"), legend = $("t-legend");
-  let playing = false, visible = false, started = false;
+  let playing = false, started = false;
 
   const NOTES = {
     RL: "Langton's ant. Chaos, then the 104-step highway.",
@@ -393,29 +396,26 @@ function countNonzero(cells) {
     stats();
   });
   $("t-speed").addEventListener("input", stats);
+  valueText($("t-speed"), () => fmt(perFrame($("t-speed"), 50000)) + " steps per frame");
   onPaletteChange(drawLegend); // runs after the shared palette refresh above
 
   let frameNo = 0;
-  function frame() {
-    if (visible) {
-      if (playing) {
-        ant.step(perFrame($("t-speed"), 50000));
-        if (ant.halted) setPlay(false);
-      }
-      field.draw();
-      if (++frameNo % 6 === 0) stats();
+  animate(canvas, () => {
+    if (playing) {
+      ant.step(perFrame($("t-speed"), 50000));
+      if (ant.halted) setPlay(false);
     }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible) field.invalidate();
-    if (visible && !started && !reduceMotion) { started = true; setPlay(true); }
-  }).observe(canvas);
+    field.draw();
+    if (++frameNo % 6 === 0) stats();
+  }, (shown) => {
+    if (shown) field.invalidate();
+    if (shown && !started && !reduceMotion) { started = true; setPlay(true); }
+  });
 
   apply("LLRR");
+  // With reduced motion, show a grown pattern rather than a lone ant on an empty grid.
+  if (reduceMotion) ant.step(150000);
   setPlay(false);
   stats();
-  frame();
+  field.draw();
 }

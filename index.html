@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Emergence — a field guide</title>
   <meta name="description" content="Interactive essays about simple rules that build complicated things: sandpiles, flocks, chemical patterns, ants and slime.">
+  <link rel="canonical" href="https://emergence.zansen.dev/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Emergence — a field guide">
+  <meta property="og:title" content="Emergence — a field guide">
+  <meta property="og:description" content="Interactive essays about simple rules that build complicated things: sandpiles, flocks, chemical patterns, ants and slime.">
+  <meta property="og:url" content="https://emergence.zansen.dev/">
+  <meta property="og:image" content="https://emergence.zansen.dev/assets/og/home.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +24,7 @@
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
+  <a class="skip" href="#main">Skip to content</a>
   <header class="site">
     <a href="/">emergence</a>
     <span class="muted">a field guide</span>
@@ -19,44 +32,44 @@
 
   <canvas class="hero-canvas" id="hero" aria-hidden="true"></canvas>
 
-  <main class="wrap">
+  <main class="wrap" id="main">
     <p class="kicker">A field guide to emergence</p>
     <h1>Nobody is in charge</h1>
-    <p class="lede">Simple rules, followed locally by lots of small things, end up building structures that none of the things know about.</p>
+    <p class="lede">Simple rules, followed locally by many small parts, build structures that none of the parts know about.</p>
 
-    <p>A termite has no blueprint for the mound. A starling has no picture of the flock. A grain of sand has no idea it is part of an avalanche. Every one of them reacts only to its immediate neighbours, and yet the whole has a shape.</p>
+    <p>A termite has no blueprint for the mound. A starling has no picture of the flock. A grain of sand has no idea it is part of an avalanche. Each reacts only to what is right next to it, and yet the whole has a shape.</p>
 
-    <p>This is a set of short interactive essays, one phenomenon each. Every chapter has a live simulation in the middle of it. Change the rules and watch what breaks. The pattern above is the first one: grains falling at random, piling up, and slumping in avalanches of every size.</p>
+    <p>This is a set of short interactive essays, one phenomenon each. Every chapter has a live simulation in the middle of it. Change the rules and watch what breaks. The pattern above comes from the first chapter. It is a sandpile that started as 9,000 grains on one square and spread out into a round, symmetric pattern. A grain is still dropped on the centre every frame, and orange flashes where the avalanches run.</p>
 
     <ol class="chapters">
       <li>
         <div>
           <a class="title" href="/sandpile">The sandpile</a>
-          <div class="desc">One grain at a time, until one grain moves the whole pile. Self-organized criticality.</div>
+          <div class="desc">One grain at a time, until one grain moves half the pile. Self-organized criticality.</div>
         </div>
       </li>
       <li>
         <div>
           <a class="title" href="/flock">The flock</a>
-          <div class="desc">Three rules, no leader, a murmuration.</div>
+          <div class="desc">Boids that follow three steering rules with no leader, and what real starlings do differently.</div>
         </div>
       </li>
       <li>
         <div>
           <a class="title" href="/patterns">Spots and stripes</a>
-          <div class="desc">Two chemicals that react and spread, and the leopard that falls out of them.</div>
+          <div class="desc">Two chemicals that react and spread at different speeds, and the spots and stripes they paint.</div>
         </div>
       </li>
       <li>
         <div>
           <a class="title" href="/ant">The ant and the highway</a>
-          <div class="desc">Ten thousand steps of chaos, then a road. Nobody has proved why.</div>
+          <div class="desc">About ten thousand steps of chaos, then a road. Nobody has proved it always happens.</div>
         </div>
       </li>
       <li>
         <div>
           <a class="title" href="/slime">Slime that builds networks</a>
-          <div class="desc">Agents that follow their own trails end up drawing transit maps.</div>
+          <div class="desc">A brainless cell that prunes a maze, and a crowd of particles that draws networks between food.</div>
         </div>
       </li>
     </ol>
@@ -68,21 +81,25 @@
 
   <script type="module">
     import { Sandpile, makeRenderer } from "/assets/sandpile.js";
+    import { reduceMotion, animate } from "/assets/a11y.js";
 
     const canvas = document.getElementById("hero");
-    const W = 180, H = 60;
+    const W = 240, H = 80;
     const pile = new Sandpile(W, H);
-    // Start near the critical state so the hero is lively immediately.
-    for (let i = 0; i < pile.h.length; i++) pile.h[i] = (Math.random() * 3.4) | 0;
-    const render = makeRenderer(canvas, pile, { dim: 0.72 });
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    function frame() {
-      for (let k = 0; k < 6; k++) pile.drop((Math.random() * pile.h.length) | 0);
-      render(0.95);
-      if (!reduce) requestAnimationFrame(frame);
-    }
-    frame();
+    const centre = (H >> 1) * W + (W >> 1);
+    // Start with a pile already grown from the centre, so its geometry shows at once,
+    // then keep adding grains there and let the avalanches flash.
+    pile.h[centre] = 9000 - 1;
+    pile.drop(centre);
+    pile.glow.fill(0);
+    const render = makeRenderer(canvas, pile, { dim: 0.35 });
+    // With reduced motion, show the grown pile as a still picture (no avalanche flashes).
+    render();
+    // Otherwise animate, but only while the hero is on screen and the tab is visible.
+    if (!reduceMotion) animate(canvas, () => {
+      pile.drop(centre);
+      render(0.92);
+    });
   </script>
 </body>
 </html>

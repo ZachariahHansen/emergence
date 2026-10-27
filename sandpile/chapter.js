@@ -1,7 +1,6 @@
 import { Sandpile, BigPile, makeRenderer, cellAt } from "/assets/sandpile.js";
 import { readPalette, onPaletteChange, css } from "/assets/palette.js";
-
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+import { reduceMotion, animate, announce, valueText, keyCursor } from "/assets/a11y.js";
 const fmt = (x) => x.toLocaleString("en-US");
 
 /* ---------------- Figure 1: pour grains, watch avalanches ---------------- */
@@ -16,7 +15,7 @@ const fmt = (x) => x.toLocaleString("en-US");
   const BINS = 18;
   const hist = new Float64Array(BINS);
   let dropped = 0, last = 0, biggest = 0, quiet = 0, avalanches = 0;
-  let raining = false, pointerCell = -1, visible = false;
+  let raining = false, pointerCell = -1, started = false;
 
   function record(size) {
     dropped++;
@@ -52,13 +51,15 @@ const fmt = (x) => x.toLocaleString("en-US");
   }
 
   $("rain").addEventListener("click", () => setRain(!raining));
-  $("ff").addEventListener("click", () => { dropRandom(20000); drawHist(); stats(); });
+  // Skip ahead without the flash: thousands of avalanches would light the whole table.
+  $("ff").addEventListener("click", () => { dropRandom(20000); pile.glow.fill(0); drawHist(); stats(); });
   $("reset").addEventListener("click", () => {
     pile.clear(); hist.fill(0);
     dropped = last = biggest = quiet = avalanches = 0;
     drawHist(); stats(); render();
   });
   $("rate").addEventListener("input", stats);
+  valueText($("rate"), () => rate() + " grains per frame");
 
   canvas.addEventListener("pointerdown", (e) => {
     canvas.setPointerCapture(e.pointerId);
@@ -71,6 +72,26 @@ const fmt = (x) => x.toLocaleString("en-US");
   const release = () => { pointerCell = -1; };
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
+
+  // Keyboard: arrows move a cursor, holding Enter or Space pours there like holding the pointer.
+  let pourStart = 0, pourBig = 0;
+  const kcell = (x, y) => Math.floor(y * N) * N + Math.floor(x * N);
+  keyCursor(canvas, {
+    step: 1 / N * 2,
+    onPress(x, y) {
+      pointerCell = kcell(x, y);
+      pourStart = dropped; pourBig = biggest;
+      record(pile.drop(pointerCell));
+    },
+    onMove(x, y, held) { if (held) pointerCell = kcell(x, y); },
+    onRelease(x, y) {
+      pointerCell = -1;
+      const n = dropped - pourStart;
+      announce(`Poured ${fmt(n)} grain${n === 1 ? "" : "s"} at column ${Math.floor(x * N) + 1}, row ${Math.floor(y * N) + 1}.` +
+        (biggest > pourBig ? ` New biggest avalanche: ${fmt(biggest)} topplings.` : ""));
+      stats();
+    },
+  });
 
   // Log–log histogram of avalanche sizes, normalised by bin width.
   const chart = document.getElementById("hist");
@@ -141,25 +162,20 @@ const fmt = (x) => x.toLocaleString("en-US");
   }
 
   let frameNo = 0;
-  function frame() {
-    if (visible) {
-      if (raining) dropRandom(rate());
-      if (pointerCell >= 0) for (let i = 0; i < 2; i++) record(pile.drop(pointerCell));
-      render(0.9);
-      if (++frameNo % 6 === 0) { stats(); drawHist(); }
-    }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible && dropped === 0 && !reduceMotion) setRain(true);
-  }).observe(canvas);
+  animate(canvas, () => {
+    if (raining) dropRandom(rate());
+    if (pointerCell >= 0) for (let i = 0; i < 2; i++) record(pile.drop(pointerCell));
+    render(0.9);
+    if (++frameNo % 6 === 0) { stats(); drawHist(); }
+  }, (shown) => {
+    if (shown && !started) { started = true; if (dropped === 0 && !reduceMotion) setRain(true); }
+  });
 
   window.addEventListener("resize", drawHist);
   setRain(false);
+  // With reduced motion, open on a pile that has already reached its steady state.
+  if (reduceMotion) { dropRandom(20000); pile.glow.fill(0); }
   stats(); drawHist(); render();
-  frame();
 }
 
 /* ---------------- Figure 2: one enormous pile in the middle ---------------- */
@@ -175,19 +191,28 @@ const fmt = (x) => x.toLocaleString("en-US");
   const showN = () => { label.textContent = fmt(grains()); };
   slider.addEventListener("input", showN);
   showN();
+  valueText(slider, () => fmt(grains()) + " grains");
 
   function start() {
     pile = new BigPile(grains());
-    render = makeRenderer(canvas, pile);
+    // (With reduced motion the previous picture stays up until the new one has settled.)
+    if (!reduceMotion) render = makeRenderer(canvas, pile);
     status.textContent = "toppling…";
     if (!running) { running = true; requestAnimationFrame(tick); }
   }
 
   function tick() {
     const done = pile.step(reduceMotion ? 200 : 14);
-    render(0.8);
+    // With reduced motion, compute without showing the collapse and draw only the result.
+    if (!reduceMotion) render(0.8);
     status.textContent = (done ? "settled after " : "") + fmt(pile.topplings) + " topplings";
-    if (done) { running = false; pile.glow.fill(0); render(); return; }
+    if (done) {
+      running = false; pile.glow.fill(0);
+      if (reduceMotion) render = makeRenderer(canvas, pile);
+      render();
+      announce(`${fmt(pile.grains)} grains settled after ${fmt(pile.topplings)} topplings.`);
+      return;
+    }
     requestAnimationFrame(tick);
   }
 

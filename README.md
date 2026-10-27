@@ -9,6 +9,8 @@ Plain static HTML, CSS and ES modules. No build step, no dependencies, no tracki
 - `index.html`: landing page and chapter list (with an ambient sandpile hero)
 - `assets/style.css`: all styles; colour tokens on `:root`, dark mode via `prefers-color-scheme`
 - `assets/palette.js`: reads CSS colour tokens so canvases follow the theme
+- `assets/a11y.js`: reduced-motion flag, `animate()` (runs only while on screen and the tab is visible),
+  a polite live region, slider `aria-valuetext`, and a keyboard cursor for paintable canvases
 - `assets/sandpile.js`: sandpile model and renderer, shared by the hero and chapter 01
 - `assets/boids.js` (02 flock), `assets/grayscott.js` (03 patterns, WebGL2 with CPU fallback),
   `assets/ant.js` (04 ant, DOM-free so it runs under node), `assets/physarum.js` (05 slime)
@@ -20,7 +22,9 @@ Plain static HTML, CSS and ES modules. No build step, no dependencies, no tracki
 1. Make `<slug>/index.html` by copying `sandpile/index.html`: keep the header, footer, fonts and the
    `figure.sim > .sim-frame` / `.controls` / `.stats` / `figcaption` markup.
 2. Put the simulation in `<slug>/chapter.js` (or a reusable model in `assets/`). Read colours with
-   `readPalette()`; pause work when the canvas is off screen; respect `prefers-reduced-motion`.
+   `readPalette()`; drive the loop with `animate()` from `assets/a11y.js` so it pauses off screen and in hidden tabs;
+   respect `prefers-reduced-motion` (open on a finished state, never auto-play); give canvases `role="img"` and an
+   `aria-label`, and add class `paint` only to canvases you draw on (it sets `touch-action: none`).
 3. In `index.html`, change that chapter's `<li class="soon">` into a link, and update the "Next" link in the
    previous chapter.
 
@@ -31,6 +35,15 @@ Writing style: plain, concrete and honest about caveats. Cite primary sources in
 ```
 python3 -m http.server 4321
 ```
+
+Add `?cpu` to the patterns page URL to force the reaction–diffusion CPU fallback.
+
+## Social preview cards
+
+`assets/og/*.png` are rendered from live simulations by `tools/og.html`. With the local server running,
+`./tools/make-og.sh` re-renders all six (needs Google Chrome). When adding a chapter, add an entry to
+`CARDS` and `ART` in `tools/og.html` and the Open Graph tags to the page's `<head>`. `tools/` is not deployed
+(`.vercelignore`).
 
 ## Deploy
 

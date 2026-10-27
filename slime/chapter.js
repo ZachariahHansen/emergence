@@ -1,7 +1,9 @@
 import { Physarum, makeTrailRenderer, gridAt, budget } from "/assets/physarum.js";
 import { css } from "/assets/palette.js";
+import { reduceMotion, animate, announce, valueText, keyCursor } from "/assets/a11y.js";
 
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// <output> is an implicit live region; the sliders already expose their values, so keep it quiet.
+for (const o of document.querySelectorAll(".sim output")) o.setAttribute("aria-live", "off");
 const fmt = (x) => x.toLocaleString("en-US");
 const $ = (id) => document.getElementById(id);
 
@@ -39,7 +41,7 @@ function prewarm(sim, steps, extra, done) {
   const render = makeTrailRenderer(canvas, sim);
   const timed = makeGovernor(sim);
   const p = sim.params;
-  let running = false, visible = false, started = false, pointer = null;
+  let running = false, started = false, pointer = null;
 
   const PRESETS = {
     // wobble is our addition (random heading jitter); "jones" is the paper's values without it.
@@ -50,17 +52,20 @@ function prewarm(sim, steps, extra, done) {
   };
 
   const sliders = {
-    sensorAngle: ["sa", (v) => v + "°", (v) => +v],
-    sensorDist:  ["sd", (v) => v + " px", (v) => +v],
-    turnAngle:   ["ra", (v) => v + "°", (v) => +v],
-    decay:       ["decay", (v) => v.toFixed(2), (v) => v / 100],
-    wobble:      ["wob", (v) => v + "°", (v) => +v],
+    sensorAngle: ["sa", (v) => v + "°", (v) => +v, (v) => v + " degrees"],
+    sensorDist:  ["sd", (v) => v + " px", (v) => +v, (v) => v + " pixels"],
+    turnAngle:   ["ra", (v) => v + "°", (v) => +v, (v) => v + " degrees"],
+    decay:       ["decay", (v) => v.toFixed(2), (v) => v / 100, null],
+    wobble:      ["wob", (v) => v + "°", (v) => +v, (v) => v + " degrees"],
   };
+  const spoken = {};
+  for (const [k, [id, , , say]] of Object.entries(sliders)) if (say) spoken[k] = valueText($(id), say);
 
   function syncSliders() {
     for (const [k, [id, show]] of Object.entries(sliders)) {
       $(id).value = k === "decay" ? Math.round(p[k] * 100) : p[k];
       $(id + "-v").textContent = show(p[k]);
+      if (spoken[k]) spoken[k]();
     }
   }
   for (const [k, [id, show, read]] of Object.entries(sliders)) {
@@ -107,36 +112,38 @@ function prewarm(sim, steps, extra, done) {
   const release = () => { pointer = null; };
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
+  // Keyboard: arrows move a cursor; hold Enter or Space to pour attractant there.
+  keyCursor(canvas, {
+    onPress(x, y) { pointer = [x * sim.w, y * sim.h]; },
+    onMove(x, y, held) { if (held) pointer = [x * sim.w, y * sim.h]; },
+    onRelease: release,
+  });
 
   const feed = () => {
     if (pointer) sim.addDisc(pointer[0], pointer[1], Math.max(3, N / 50), Math.max(40, sim.mean * 6));
   };
 
   let frameNo = 0;
-  function frame() {
-    if (visible && running) {
+  animate(canvas, () => {
+    if (running) {
       timed(() => { feed(); sim.step(); });
       render();
       if (++frameNo % 10 === 0) stats();
-    } else if (visible && pointer) {
+    } else if (pointer) {
       // Paused: still show where attractant is being laid.
       feed(); sim.diffuse(); render();
     }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible && !started && !reduceMotion) { started = true; setRunning(true); }
-  }).observe(canvas);
+  }, (shown) => {
+    if (shown && !started && !reduceMotion) { started = true; setRunning(true); }
+  });
 
   addEventListener("resize", () => { if (!running) render(); });
   Object.assign(p, PRESETS.cells);
   syncSliders(); markPreset("cells");
   setRunning(false);
   stats(); render();
-  if (reduceMotion) prewarm(sim, 300, null, () => { render(); stats(); });
-  frame();
+  // A head start so the first thing a reader sees is a network forming, not static.
+  prewarm(sim, reduceMotion ? 300 : 80, null, () => { render(); stats(); });
 }
 
 /* ---------------- Figure 3: food sources, linked ---------------- */
@@ -178,7 +185,7 @@ function prewarm(sim, steps, extra, done) {
     },
   });
 
-  let running = false, visible = false, started = false;
+  let running = false, started = false;
   let drag = null; // { f, moved, x0, y0 }
 
   function stats() {
@@ -197,6 +204,7 @@ function prewarm(sim, steps, extra, done) {
   $("t-layout").addEventListener("click", () => { resetFood(); sim.seed(); render(); stats(); });
   $("t-clear").addEventListener("click", () => { food = []; render(); stats(); });
   $("food-k").addEventListener("input", () => { $("food-k-v").textContent = strength() + "×"; });
+  valueText($("food-k"), (v) => v + " times the mean trail");
   $("food-k-v").textContent = strength() + "×";
 
   function frac(e) {
@@ -237,6 +245,18 @@ function prewarm(sim, steps, extra, done) {
   });
   canvas.addEventListener("pointercancel", () => { drag = null; });
 
+  // Keyboard: arrows move a cursor; Enter or Space adds food there, or removes the source under it.
+  keyCursor(canvas, {
+    step: 1 / 40,
+    onPress(x, y) {
+      const f = hit(x, y, canvas.clientWidth);
+      if (f) food = food.filter((g) => g !== f);
+      else food.push({ x: Math.min(0.98, Math.max(0.02, x)), y: Math.min(0.98, Math.max(0.02, y)), hub: false });
+      render(); stats();
+      announce((f ? "Removed a food source. " : "Added a food source. ") + food.length + " food sources.");
+    },
+  });
+
   // Each source keeps leaking attractant into the trail map, scaled to the current mean trail.
   function feed() {
     const amt = Math.max(20, sim.mean * strength());
@@ -245,23 +265,18 @@ function prewarm(sim, steps, extra, done) {
   }
 
   let frameNo = 0;
-  function frame() {
-    if (visible && running) {
+  animate(canvas, () => {
+    if (running) {
       timed(() => { feed(); sim.step(); });
       render();
       if (++frameNo % 10 === 0) stats();
     }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible && !started && !reduceMotion) { started = true; setRunning(true); }
-  }).observe(canvas);
+  }, (shown) => {
+    if (shown && !started && !reduceMotion) { started = true; setRunning(true); }
+  });
 
   addEventListener("resize", () => { if (!running) render(); });
   setRunning(false);
   stats(); render();
-  if (reduceMotion) prewarm(sim, 400, feed, () => { render(); stats(); });
-  frame();
+  prewarm(sim, reduceMotion ? 400 : 100, feed, () => { render(); stats(); });
 }

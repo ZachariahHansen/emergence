@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Slime that builds networks — Emergence</title>
   <meta name="description" content="An interactive essay on Physarum polycephalum and Jeff Jones's agent model: how a brainless single cell, and a crowd of particles following one rule, build efficient transport networks.">
+  <link rel="canonical" href="https://emergence.zansen.dev/slime">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Emergence — a field guide">
+  <meta property="og:title" content="Slime that builds networks — Emergence">
+  <meta property="og:description" content="An interactive essay on Physarum polycephalum and Jeff Jones's agent model: how a brainless single cell, and a crowd of particles following one rule, build efficient transport networks.">
+  <meta property="og:url" content="https://emergence.zansen.dev/slime">
+  <meta property="og:image" content="https://emergence.zansen.dev/assets/og/slime.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,38 +35,37 @@
   </style>
 </head>
 <body>
+  <a class="skip" href="#main">Skip to content</a>
   <header class="site">
     <a href="/">emergence</a>
     <span class="muted">chapter 05</span>
   </header>
 
-  <main class="wrap">
+  <main id="main">
+
+  <div class="wrap">
     <p class="kicker">Chapter 05 · Transport networks</p>
     <h1>Slime that builds networks</h1>
     <p class="lede">A yellow film creeps across a dish of oat flakes. It has no brain and no nerves. Within a day or so it has joined the flakes with a web of tubes that an engineer would not be embarrassed by.</p>
 
-    <p>The film is <em>Physarum polycephalum</em>, usually called a slime mould. It is not a mould, or any kind of fungus. In the stage people study, the plasmodium, it is a single cell: one enormous bag of cytoplasm holding many nuclei, with no walls between them. A plasmodium can spread over many centimetres. It feeds by engulfing microbes, and in the lab it is happy on oats.</p>
+    <p>The film is <em>Physarum polycephalum</em>, usually called a slime mould, though it is not a mould or any kind of fungus. In the stage people study, the <em>plasmodium</em>, it is a single cell: one enormous bag of cytoplasm holding many nuclei, with no walls between them. It can spread over many centimetres.</p>
 
-    <p>Inside, the cell is a network of tubes. Cytoplasm streams through them, sloshing back and forth and reversing direction every minute or two. Tubes that carry a lot of flow tend to thicken. Tubes that carry little thin out and are eventually abandoned. Nothing in the cell surveys the whole network and decides which tubes to keep. Each bit of tube responds only to what is flowing through it.</p>
+    <p>Inside, the cell is a network of tubes. Cytoplasm sloshes back and forth through them, reversing roughly every minute, so that a full back-and-forth takes a minute or two. Tubes that carry a lot of flow tend to thicken, and tubes that carry little thin out and are abandoned. Each bit of tube responds only to what is flowing through it.</p>
 
-    <h2>A maze, carefully stated</h2>
+    <p>In 2000 Toshiyuki Nakagaki, Hiroyasu Yamada and Ágota Tóth published a one-page paper in <em>Nature</em> called "Maze-solving by an amoeboid organism." They filled every corridor of a small maze with pieces of plasmodium, which fused into one cell, and put food at two exits. Over the next several hours the cell pulled its tubes out of the dead ends, leaving a thick tube joining the two food sources, usually along the shortest route.</p>
 
-    <p>In 2000 Toshiyuki Nakagaki, Hiroyasu Yamada and Ágota Tóth published a one-page paper in <em>Nature</em> with the title "Maze-solving by an amoeboid organism." They cut a small maze out of plastic film laid on agar and filled every corridor with pieces of plasmodium, which fused into one cell. Then they put food at two exits.</p>
-
-    <p>Over the next several hours the cell pulled its tubes out of the dead ends and the long way round, and what remained was a thick tube joining the two food sources through the maze, usually along the shortest route.</p>
-
-    <p>It is worth being precise about what that means. The slime did not wander in from the entrance and search for the exit, the way a person or a mouse would. It already filled the whole maze. What it did was <em>prune</em>: start with every path at once and let the poorly used ones wither. That is still remarkable for a cell with no nervous system, and it is a genuinely useful way to find short paths. It is just a different trick from the one the word "solve" calls to mind.</p>
+    <p>The slime did not search the maze the way a mouse would. It already filled it, and it <em>pruned</em>: it started with every path at once and let the poorly used ones wither. That is a useful way to find short paths, but a different trick from the one the word "solve" calls to mind.</p>
 
     <h2>The rule</h2>
 
-    <p>In 2010 Jeff Jones, a computer scientist, published a model that grows Physarum-like networks out of a crowd of particles. It does not simulate cytoplasm, tubes or flow. It is closer in spirit to an ant colony: lots of simple agents, each leaving a chemical trail and following the trails of others.</p>
+    <p>In 2010 Jeff Jones, a computer scientist, published a model that grows Physarum-like networks out of a crowd of particles. It does not simulate cytoplasm or flow. Its agents each leave a chemical trail and follow the trails of others, more like ants than like a cell.</p>
 
-    <p>The world is a grid holding a <strong>trail</strong> value in every square. Each agent has a position and a heading, and three sensors that sit a fixed distance ahead of it: one straight ahead, one angled to the left, one angled to the right. Every step, each agent does four things:</p>
+    <p>The world is a grid holding a <strong>trail</strong> value in every square. Each agent has a position, a heading and three sensors a fixed distance ahead of it, one straight ahead and one angled to each side. Every step, each agent does four things:</p>
 
     <p><strong>Sense</strong> the trail under its three sensors. <strong>Turn</strong> toward the strongest: if the forward sensor is strongest, keep straight; if left or right is stronger, rotate that way by a fixed turn angle; if forward is the weakest of the three, turn left or right at random. <strong>Move</strong> one square forward. <strong>Deposit</strong> a little trail where it lands.</p>
 
-    <p>Then the trail map itself does two things: it <strong>diffuses</strong>, each square becoming the average of itself and its eight neighbours, and it <strong>decays</strong>, losing a fixed fraction everywhere. That is the whole model.</p>
-  </main>
+    <p>Then the trail map <strong>diffuses</strong>, each square becoming the average of itself and its eight neighbours, and <strong>decays</strong>, losing a fixed fraction everywhere. That is the whole model.</p>
+  </div>
 
   <figure class="sim" id="fig-agent">
     <div class="sim-frame">
@@ -77,21 +88,21 @@
         <text x="40" y="100">agent</text>
       </svg>
     </div>
-    <figcaption>Figure 1. One agent and its three sensors. Up is the agent's left. The shaded band is trail laid by other agents; the right sensor reads the most, so this step the agent turns right by the turn angle and moves forward.</figcaption>
+    <figcaption>Figure 1. One agent and its three sensors. Up is the agent's left. The shaded band is trail laid by other agents. The right sensor reads the most, so this step the agent turns right by the turn angle and moves forward.</figcaption>
   </figure>
 
-  <main class="wrap">
-    <p>No agent knows where any network is. It knows three numbers. But every agent that follows a trail also adds to it, so busy trails get busier and quiet ones fade. Below, tens of thousands of agents start scattered at random and do exactly this.</p>
-  </main>
+  <div class="wrap">
+    <p>No agent knows where any network is. It knows three numbers. But every agent that follows a trail also adds to it, so busy trails get busier and quiet ones fade. In Figure 2, tens of thousands of agents start scattered at random and do exactly this.</p>
+  </div>
 
   <figure class="sim" id="fig-net">
     <div class="sim-frame">
-      <canvas class="field smooth" id="net" aria-label="Physarum agent simulation. Press and drag to lay down attractant."></canvas>
+      <canvas class="field smooth paint" id="net" role="img" aria-label="Physarum agent simulation. Press and drag to lay down attractant. With the keyboard, arrow keys move a cursor and holding Enter or Space pours attractant there."></canvas>
       <div class="controls">
         <button id="net-run" class="primary">Run</button>
         <button id="net-reseed">Scatter</button>
-        <div class="presets">
-          <span>presets</span>
+        <div class="presets" role="group" aria-labelledby="net-presets-label">
+          <span id="net-presets-label">presets</span>
           <button data-preset="cells" aria-pressed="true">Cells</button>
           <button data-preset="fine" aria-pressed="false">Fine mesh</button>
           <button data-preset="coarse" aria-pressed="false">Coarse cords</button>
@@ -109,32 +120,30 @@
         <div class="stat">steps<b id="n-steps">0</b></div>
       </div>
     </div>
-    <figcaption>Figure 2. Jones's agent model. Darker (in dark mode, brighter) means more trail. Press and drag on the dish to pour attractant and watch the network bend toward it. Presets reseed the agents; sliders act live. The number of agents is scaled to your device.</figcaption>
+    <figcaption>Figure 2. Jones's agent model. Darker means more trail (brighter in dark mode). Press and drag on the dish to pour attractant and watch the network bend toward it. The presets reseed the agents, and the sliders act live. The number of agents is scaled to your device.</figcaption>
   </figure>
 
-  <main class="wrap">
+  <div class="wrap">
     <h2>What the dials do</h2>
 
-    <p>Within a few seconds the scattered agents gather into strands, and the strands join into a lacy network of cords and cells.</p>
+    <p>Within a few seconds the scattered agents gather into strands, and the strands join into a lacy network of cords and cells. Press <span class="mono">Jones 2010</span> to run the model with the values from Jones's paper. The lace doesn't last. Thin strands drain into thicker ones, and after a couple of thousand steps only a few fat cords are left. That echoes the organism, which also abandons most of its tubes, but it makes for a dull dish. So the other presets add a dial of our own that is <em>not</em> in Jones's model: <span class="mono">wobble</span>, a small random jitter in each agent's heading. It keeps agents spilling out of the big cords, and with about 25° of it the network stays a mesh.</p>
 
-    <p>Press <span class="mono">Jones 2010</span> to run the model with the values from Jones's paper. The lace doesn't last. Small loops close up, thin strands drain into thicker ones, and after a couple of thousand steps only a few fat cords are left. That is the model's real behaviour, and it echoes the organism, which also abandons most of its tubes and keeps a few. But it makes for a dull dish, so the other presets add one dial of our own that is <em>not</em> in Jones's model: <strong>wobble</strong>, a small random jitter added to each agent's heading every step. A little jitter keeps agents spilling out of the big cords, and with about 25° of it the network settles into a mesh of cells that stays a mesh.</p>
+    <p>Jones found that the sensor angle, the turn angle and how far ahead the sensors reach matter most. A short <span class="mono">sensor distance</span> gives a fine, crowded mesh (<span class="mono">Fine mesh</span>). A long one lets agents notice trails from far away, so the network has fewer, longer cords (<span class="mono">Coarse cords</span>). <span class="mono">decay</span> sets how long a trail is remembered, and low decay helps the network coarsen. Turn <span class="mono">wobble</span> to zero on any preset and watch the network prune itself.</p>
 
-    <p>The other dials change the mesh's character. Jones explored how the patterns depend on the parameters and found that the sensor angle, the turn angle and how far ahead the sensors reach matter most. A short sensor distance gives a fine, crowded mesh (<span class="mono">Fine mesh</span>). A long one lets agents notice trails from far away, so the network is made of fewer, longer cords (<span class="mono">Coarse cords</span>). Decay sets how long a trail is remembered: low decay lets old trails linger and helps the network coarsen, high decay forgets quickly. Turn the wobble down to zero on any preset and watch it start to prune itself; turn it all the way up and the agents are too jittery to follow anything.</p>
-
-    <p>Notice what the model leaves out. There is no tube, no thickness, no flow and no food in the rule. A "cord" is just a place where many agents happen to be following one another. The network is a pattern in the crowd, not a structure anyone built.</p>
+    <p>There is no tube, no thickness, no flow and no food in the rule. A "cord" is just a place where many agents happen to be following one another.</p>
 
     <h2>The Tokyo experiment</h2>
 
-    <p>A maze has one right answer. Most real networks don't. A rail system, for instance, is pulled between three goals that fight each other. It should be <em>cheap</em>, which means short total track. It should be <em>efficient</em>, which means short trips between any two stations. And it should be <em>robust</em>, which means that cutting one link should not strand anyone. A tree is cheapest but fragile. Connecting everything to everything is efficient and robust but absurdly expensive.</p>
+    <p>A maze has one right answer. A rail system has to trade off goals that fight. It should be <em>cheap</em>, meaning short total track, and <em>efficient</em>, meaning short trips between stations. It should also be <em>robust</em>, so that cutting one link does not strand anyone.</p>
 
-    <p>In 2010 Atsushi Tero, Nakagaki and colleagues published a test of how Physarum handles that trade-off. They placed oat flakes on a wet surface in the pattern of cities around Tokyo, with the slime starting at the flake for Tokyo itself. Because Physarum avoids light, they used lighting to mark mountains and coastline where it should not grow. The plasmodium spread out, and then, as in the maze, it thinned its tubes down to a network linking the flakes.</p>
+    <p>In 2010 Atsushi Tero, Nakagaki and colleagues tested how Physarum handles that trade-off. They placed 36 oat flakes on a wet surface in the pattern of cities around Tokyo, with the slime starting at the flake for Tokyo itself. Because Physarum avoids light, they used lighting to mark mountains and coastline where it should not grow. As in the maze, the plasmodium spread out and then thinned its tubes down to a network.</p>
 
-    <p>They compared those networks with the real rail network of the region on the three measures above: total length, travel efficiency and how well the network survived losing a random link. On those measures the slime's networks were comparable to the railway. Some came out a little better on one measure and a little worse on another, as you would expect from a design that trades them off. The paper also introduced a mathematical model of the tubes based on flow, in which tubes carrying more flux grow thicker. That model, not the agent model on this page, is the one built to explain the experiment.</p>
-  </main>
+    <p>On total length, travel efficiency and how well the network survived losing a random link, the slime's networks were comparable to the region's real railway. Some did a little better on one measure and worse on another. The paper also introduced a mathematical model in which tubes carrying more flow grow thicker. That flow model, not the agent model on this page, is the one built to explain the experiment.</p>
+  </div>
 
   <figure class="sim" id="fig-tokyo">
     <div class="sim-frame">
-      <canvas class="field smooth" id="tokyo" aria-label="Food sources linked by a Physarum agent network. Tap empty space to add food, tap a source to remove it, drag to move it."></canvas>
+      <canvas class="field smooth paint" id="tokyo" role="img" aria-label="Food sources linked by a Physarum agent network. Tap empty space to add food, tap a source to remove it, drag to move it. With the keyboard, arrow keys move a cursor and Enter adds food there, or removes the source under it."></canvas>
       <div class="controls">
         <button id="t-run" class="primary">Run</button>
         <button id="t-restart">Restart slime</button>
@@ -148,30 +157,31 @@
         <div class="stat">steps<b id="t-steps">0</b></div>
       </div>
     </div>
-    <figcaption>Figure 3. Food sources (orange) leak attractant into the trail map, and the same agents as Figure 2 (with 20° of wobble) link them into a network. The layout is an illustrative scatter with one large hub, not a map of Tokyo. Tap empty space to add food, tap a source to remove it, drag to move it. This is Jones's agent model, not the flow model Tero and colleagues used, and it measures nothing.</figcaption>
+    <figcaption>Figure 3. Food sources (orange) leak attractant into the trail map, and the same agents as Figure 2, with 20° of wobble, link them into a network. The layout is an illustrative scatter with one large hub, not a map of Tokyo. Tap empty space to add food, tap a source to remove it, and drag to move it. This is Jones's agent model, not the flow model Tero and colleagues used, and it measures nothing.</figcaption>
   </figure>
 
-  <main class="wrap">
-    <p>The agents start everywhere at once, the way the plasmodium filled the maze. Wherever food sits, trail is always strong, so agents gather there, and the cords that form between nearby sources are reinforced from both ends. Move a source and watch the cords that ran to it slacken while new ones grow toward its new position. Remove one and its links fade within seconds. Remove all of them and the network forgets the layout and goes back to the free-floating pattern of Figure 2.</p>
+  <div class="wrap">
+    <p>The agents start everywhere at once, the way the plasmodium filled the maze. Trail is always strong where food sits, so agents gather there, and the cords between nearby sources are reinforced from both ends. Drag a source and watch new cords grow toward it as the old ones slacken. Press <span class="mono">Remove all food</span> and the network forgets the layout and goes back to the free-floating pattern of Figure 2.</p>
 
     <h2>The honest caveats</h2>
 
-    <p>Jones's model is an approximation of the look of a Physarum network, not of its biology. It reproduces the way strands form, merge and coarsen, and it is fast and easy to play with, but its agents are not pieces of a cell and its trail is not cytoplasm. A model that grows networks like Physarum does not prove that Physarum works like the model. This version also differs from Jones's original in two ways: it leaves out his rule that no two agents may share a grid square, and, except in the <span class="mono">Jones 2010</span> preset, it adds the wobble described above, which is our own change to stop the network coarsening.</p>
+    <p>Jones's model imitates the look of a Physarum network, not its biology. Its agents are not pieces of a cell and its trail is not cytoplasm. A model that grows networks like Physarum does not prove that Physarum works like the model. This version also differs from Jones's original in two ways. It leaves out his rule that no two agents may share a grid square, and, except in the <span class="mono">Jones 2010</span> preset, it adds the wobble described above.</p>
 
-    <p>"Solves mazes" is a fair headline only with the asterisk from earlier. The organism started out occupying the whole maze and kept the best-supplied route. Later work has shown it can do surprising things when it really does have to explore, but the 2000 result is about pruning.</p>
+    <p>"Solves mazes" needs the asterisk from earlier. The 2000 result is about pruning a maze the cell already filled.</p>
 
-    <p>The Tokyo comparison was made on specific measures: length, efficiency and fault tolerance. It does not mean that a slime mould could plan a railway. Real rail networks answer to terrain, land prices, history and politics, none of which an oat flake represents. What the experiment showed is narrower and still striking: a feedback rule that thickens busy tubes and starves idle ones finds good compromises between cost, speed and robustness, with no one weighing them up.</p>
+    <p>The Tokyo comparison was made on specific measures. It does not mean that a slime mould could plan a railway, which answers to terrain, land prices and politics. What the experiment showed is narrower: a feedback rule that thickens busy tubes and starves idle ones finds good compromises between cost, speed and robustness, with no one weighing them up.</p>
 
     <hr>
 
     <h2>Five rules</h2>
 
-    <p>That is the last chapter. Each one has been a different version of the same small surprise. Sand grains that topple at four built a pile that tunes itself to the edge of collapse. Birds that steer by their nearest neighbours made a flock that turns as one. Chemicals that react and spread at different speeds laid down spots and stripes. An ant that turns left or right on the colour of its square wandered for ten thousand steps and then built a highway. And a crowd of particles that follow the strongest scent drew a network linking every source of food. In none of them does any part see the whole, and in all of them the whole has a shape. That gap between what each piece knows and what the pieces make together is what this field guide has been about.</p>
+    <p>Each chapter has been a version of the same small surprise. Sand grains that topple at four built a pile that tunes itself to the edge of collapse. Boids that steer by their neighbours made a flock that turns as one. Chemicals that react and spread at different speeds laid down spots and stripes. An ant that turns left or right by the colour of its square made a mess for ten thousand steps and then built a highway. And a crowd of particles that follow the strongest trail drew a network between the food. In none of them does any part see the whole, and in all of them the whole has a shape. That gap between what each piece knows and what the pieces make together is what this field guide has been about.</p>
 
     <h2>Try this</h2>
-    <p>In Figure 3, remove all the food, wait for the network to relax, then add three sources in a triangle. Watch whether the agents connect them along the edges of the triangle, through a single junction in the middle, or both. Then slowly drag one corner away.</p>
+    <p>In Figure 3, press <span class="mono">Remove all food</span>, wait for the network to relax, then tap to add three sources in a triangle. Watch whether the agents connect them along the edges of the triangle, through a single junction in the middle, or both. Then slowly drag one corner away.</p>
 
     <p class="next muted">Next: <a href="/">All chapters</a></p>
+  </div>
   </main>
 
   <footer class="site">

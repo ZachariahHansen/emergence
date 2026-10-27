@@ -21,6 +21,7 @@ let support; // cached result of the WebGL probe
 function gpuFormat() {
   if (support !== undefined) return support;
   support = null;
+  if (new URLSearchParams(location.search).has("cpu")) return support; // force the fallback, for testing
   try {
     const gl = document.createElement("canvas").getContext("webgl2");
     if (!gl) return support;

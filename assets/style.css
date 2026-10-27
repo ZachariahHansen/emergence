@@ -4,7 +4,7 @@
   --ink: #2a211b;
   --muted: #6f6256;
   --rule: #d9ccb6;
-  --accent: #c8461f;
+  --accent: #b5401c; /* was #c8461f: 3.93:1 on --surface, now 4.6:1 */
 
   /* sandpile heights 0..3, plus the avalanche glow */
   --h0: #f6f1e7;
@@ -53,6 +53,35 @@ body {
 a { color: inherit; text-decoration-color: var(--accent); text-underline-offset: 0.18em; }
 a:hover { color: var(--accent); }
 
+/* ---------- accessibility ---------- */
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+canvas:focus-visible { outline-offset: 3px; }
+
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.skip {
+  position: absolute; left: 16px; top: -3rem; z-index: 10;
+  font-family: var(--mono); font-size: 0.8rem; padding: 6px 10px;
+  background: var(--ink); color: var(--bg); border-radius: 4px;
+}
+.skip:focus { top: 8px; }
+
+/* keyboard cursor drawn over focusable canvases (see assets/a11y.js) */
+.kbd-cursor {
+  position: absolute; width: 18px; height: 18px; pointer-events: none; z-index: 2;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  border: 2px solid var(--accent); box-shadow: 0 0 0 2px var(--bg);
+}
+.kbd-cursor[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
 .wrap { max-width: var(--measure); margin: 0 auto; padding: 0 16px; }
 .wide { max-width: 52rem; margin: 0 auto; padding: 0 16px; }
 
@@ -100,20 +129,25 @@ figure.sim {
 .sim canvas.field {
   display: block; width: 100%; aspect-ratio: 1 / 1;
   image-rendering: pixelated; image-rendering: crisp-edges;
-  border-radius: 3px; touch-action: none; cursor: crosshair;
+  border-radius: 3px; cursor: default;
   background: var(--h0);
 }
+/* Only canvases you paint, pour or chase on capture touch; the rest let the page scroll. */
+.sim canvas.field.paint { touch-action: none; cursor: crosshair; }
 .controls {
   display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
   margin-top: 12px; font-family: var(--mono); font-size: 0.8rem;
 }
 .controls label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
-.controls input[type="range"] { width: 120px; accent-color: var(--accent); }
+.controls input[type="range"] { width: 120px; min-height: 24px; accent-color: var(--accent); }
+/* Text fields and selects need a visible boundary (3:1); --rule alone is too faint. */
+.sim .controls select, .sim .controls input[type="text"] { border-color: var(--muted); }
 button {
   font: inherit; font-family: var(--mono); font-size: 0.8rem;
   color: var(--ink); background: var(--bg);
   border: 1px solid var(--rule); border-radius: 4px;
   padding: 6px 10px; cursor: pointer;
+  min-height: 30px; min-width: 30px;
 }
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }

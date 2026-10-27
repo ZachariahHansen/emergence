@@ -1,0 +1,137 @@
+<!doctype html>
+<!-- Social preview cards. Render with tools/make-og.sh; ?ch=home|sandpile|flock|patterns|ant|slime -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    /* Cards always use the dark palette. */
+    :root {
+      --bg: #14110e; --surface: #1d1915; --ink: #ece3d4; --muted: #a3968a; --rule: #3a322a; --accent: #ff7a4d;
+      --h0: #14110e; --h1: #3d3127; --h2: #8f6743; --h3: #efd2a4; --glow: #ff7a4d;
+      color-scheme: dark;
+    }
+    html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: var(--bg); }
+    .card { display: grid; grid-template-columns: 570px 630px; height: 630px; }
+    .text { padding: 64px 40px 56px 64px; display: flex; flex-direction: column; }
+    .brand { font-family: var(--mono); font-size: 22px; color: var(--muted); letter-spacing: 0.02em; }
+    .kicker { font-family: var(--mono); font-size: 20px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin-top: auto; }
+    h1 { font-size: 84px; line-height: 1.02; margin: 18px 0 22px; font-weight: 500; letter-spacing: -0.015em; }
+    h1.long { font-size: 68px; }
+    .lede { font-size: 30px; line-height: 1.3; color: var(--muted); margin: 0; }
+    .url { font-family: var(--mono); font-size: 20px; color: var(--muted); margin-top: 36px; }
+    .art { width: 630px; height: 630px; display: block; image-rendering: pixelated; background: var(--h0); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="text">
+      <div class="brand">emergence · a field guide</div>
+      <div class="kicker" id="kicker"></div>
+      <h1 id="title"></h1>
+      <p class="lede" id="lede"></p>
+      <div class="url">emergence.zansen.dev</div>
+    </div>
+    <canvas class="art" id="art" width="630" height="630"></canvas>
+  </div>
+
+  <script type="module">
+    import { BigPile, makeRenderer } from "/assets/sandpile.js";
+    import { Flock } from "/assets/boids.js";
+    import { createGrayScott } from "/assets/grayscott.js";
+    import { Ant } from "/assets/ant.js";
+    import { Physarum, makeTrailRenderer } from "/assets/physarum.js";
+    import { readPalette, css } from "/assets/palette.js";
+
+    const CARDS = {
+      home:     ["Interactive essays", "Nobody is in charge", "Simple rules, followed locally, building structures nobody planned."],
+      sandpile: ["Chapter 01", "The sandpile", "One grain at a time, until one grain moves the whole pile."],
+      flock:    ["Chapter 02", "The flock", "Three local rules, no leader, and a murmuration."],
+      patterns: ["Chapter 03", "Spots and stripes", "Two chemicals that react and spread, and the leopard that falls out of them."],
+      ant:      ["Chapter 04", "The ant and the highway", "About ten thousand steps of chaos, then a road."],
+      slime:    ["Chapter 05", "Slime that builds networks", "Agents that follow their own trails end up drawing transit maps."],
+    };
+    const ch = new URLSearchParams(location.search).get("ch") || "home";
+    const [kicker, title, lede] = CARDS[ch];
+    document.getElementById("kicker").textContent = kicker;
+    document.getElementById("title").textContent = title;
+    if (title.length > 20) document.getElementById("title").classList.add("long");
+    document.getElementById("lede").textContent = lede;
+
+    let canvas = document.getElementById("art");
+    const pal = readPalette();
+
+    function pile(grains) {
+      const p = new BigPile(grains);
+      while (!p.step(1000));
+      p.glow.fill(0);
+      makeRenderer(canvas, p)();
+    }
+
+    const ART = {
+      // The home card is a 2×2 grid of four chapters.
+      home() {
+        const grid = document.createElement("div");
+        grid.style.cssText = "display:grid;grid-template-columns:315px 315px;width:630px;height:630px";
+        canvas.replaceWith(grid);
+        for (const name of ["sandpile", "patterns", "slime", "ant"]) {
+          canvas = document.createElement("canvas");
+          canvas.width = canvas.height = 315;
+          canvas.className = "art";
+          canvas.style.cssText = "width:315px;height:315px";
+          grid.appendChild(canvas);
+          ART[name]();
+        }
+      },
+      sandpile: () => pile(1 << 15),
+      flock() {
+        const f = new Flock(320, 600);
+        for (let i = 0; i < 700; i++) f.step();
+        const ctx = canvas.getContext("2d"), s = canvas.width / f.size;
+        ctx.fillStyle = css(pal.h0); ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < f.n; i++) {
+          const x = f.x[i] * s, y = f.y[i] * s, a = Math.atan2(f.vy[i], f.vx[i]);
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+          ctx.fillStyle = css(i === 0 ? pal.accent : pal.h3);
+          ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5, 4); ctx.lineTo(-3, 0); ctx.lineTo(-5, -4); ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+      },
+      patterns() {
+        const sim = createGrayScott(canvas, { n: ch === "home" ? 160 : 256, cpuN: 160 });
+        canvas = sim.canvas;
+        sim.F = 0.029; sim.k = 0.057;
+        sim.seed({ count: 14, size: 0.06 });
+        sim.step(sim.kind === "webgl" ? 9000 : 6000);
+        sim.draw();
+      },
+      ant() {
+        // The highway runs down and to the left, so start up and to the right of centre.
+        const n = 120, a = new Ant(n, "RL");
+        a.reset(n - 44, 44, 0);
+        a.step(13200);
+        const ctx = canvas.getContext("2d");
+        canvas.width = n; canvas.height = n;
+        const img = ctx.createImageData(n, n);
+        for (let i = 0; i < n * n; i++) {
+          const c = a.cells[i] ? pal.h3 : pal.h0;
+          img.data[i * 4] = c[0]; img.data[i * 4 + 1] = c[1]; img.data[i * 4 + 2] = c[2]; img.data[i * 4 + 3] = 255;
+        }
+        const p = (a.y * n + a.x) * 4;
+        img.data[p] = pal.accent[0]; img.data[p + 1] = pal.accent[1]; img.data[p + 2] = pal.accent[2];
+        ctx.putImageData(img, 0, 0);
+      },
+      slime() {
+        const sim = new Physarum(300, 300, 18000);
+        Object.assign(sim.params, { sensorAngle: 22.5, sensorDist: 9, turnAngle: 45, decay: 0.3, wobble: 25 });
+        for (let i = 0; i < 700; i++) sim.step();
+        makeTrailRenderer(canvas, sim)();
+      },
+    };
+    await document.fonts.ready;
+    ART[ch]();
+    document.title = "ready";
+  </script>
+</body>
+</html>

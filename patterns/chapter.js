@@ -1,7 +1,6 @@
 import { createGrayScott, mapParams } from "/assets/grayscott.js";
 import { readPalette, onPaletteChange, css } from "/assets/palette.js";
-
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+import { reduceMotion, animate, announce, valueText, keyCursor } from "/assets/a11y.js";
 const fmt = (x) => x.toLocaleString("en-US");
 const $ = (id) => document.getElementById(id);
 
@@ -36,7 +35,7 @@ const dish = (() => {
   const STEPS = gpu ? 16 : 8;            // simulation steps per animation frame
   const PRERUN = gpu ? 3000 : 1200;      // steps computed at once when motion is reduced
   const feed = $("feed"), kill = $("kill");
-  let running = false, visible = false, started = false, painting = false, preset = PRESETS[0];
+  let running = false, started = false, painting = false, preset = PRESETS[0];
 
   // Preset buttons.
   const box = $("presets");
@@ -91,8 +90,9 @@ const dish = (() => {
   kill.addEventListener("input", () => setParams(sim.F, +kill.value));
 
   // Painting: while the pointer is down, the brush keeps topping up V under it.
-  function paint(e) {
-    sim.brush(...pointerPos(canvas, e), 0.025);
+  function paint(e) { paintAt(...pointerPos(canvas, e)); }
+  function paintAt(x, y) {
+    sim.brush(x, y, 0.025);
     if (!running) { sim.step(1); sim.draw(); }
   }
   canvas.addEventListener("pointerdown", (e) => {
@@ -104,30 +104,31 @@ const dish = (() => {
   const release = () => { painting = false; sim.brush(null); };
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
+  // Keyboard: arrows move a cursor; hold Enter or Space to keep adding V under it.
+  keyCursor(canvas, {
+    onPress: paintAt,
+    onMove(x, y, held) { if (held) paintAt(x, y); },
+    onRelease() { sim.brush(null); if (!running) { sim.draw(); stats(); } },
+  });
 
   sim.onrestore = () => { reset(); };
   onPaletteChange(() => requestAnimationFrame(() => sim.draw()));
 
   let frameNo = 0;
-  function frame() {
-    if (visible && running && !sim.lost) {
+  animate(canvas, () => {
+    if (running && !sim.lost) {
       sim.step(STEPS);
       sim.draw();
       if (++frameNo % 10 === 0) stats();
     }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible && !started && !reduceMotion) { started = true; setRun(true); }
-  }).observe(canvas);
+  }, (shown) => {
+    if (shown && !started && !reduceMotion) { started = true; setRun(true); }
+  });
 
   setRun(false);
   setParams(preset.F, preset.k);
   sim.seed({ count: 10, size: 0.05 });
   if (reduceMotion) settle(); else { sim.draw(); stats(); }
-  frame();
 
   return {
     load(F, k) {
@@ -146,7 +147,7 @@ const dish = (() => {
   const CAP = 10000;                                  // stop here; the map has mostly settled
   const STEPS = reduceMotion ? (gpu ? 200 : 20) : (gpu ? 24 : 6);
   const mark = $("map-mark"), dots = $("map-dots"), status = $("m-status");
-  let visible = false, done = false;
+  let done = false;
 
   const place = (el, F, k) => {
     const x = (k - MAP.k0) / (MAP.k1 - MAP.k0), y = (MAP.f1 - F) / (MAP.f1 - MAP.f0);
@@ -171,10 +172,22 @@ const dish = (() => {
 
   canvas.addEventListener("pointermove", (e) => { $("m-here").textContent = show(read(e)); });
   canvas.addEventListener("pointerleave", () => { $("m-here").textContent = "—"; });
-  canvas.addEventListener("click", (e) => {
-    const p = read(e);
+  function load(p) {
     dish.load(p.F, p.k);
     $("m-loaded").textContent = show(p);
+  }
+  canvas.addEventListener("click", (e) => load(read(e)));
+  // Keyboard: arrows move a cursor over the map, Enter or Space sends that point to Figure 1.
+  keyCursor(canvas, {
+    step: 1 / 40,
+    onFocus(x, y) { if (canvas.matches(":focus-visible")) $("m-here").textContent = show(mapParams(MAP, x, y)); },
+    onMove(x, y) { $("m-here").textContent = show(mapParams(MAP, x, y)); },
+    onPress(x, y) {
+      const p = mapParams(MAP, x, y);
+      load(p);
+      announce("Sent " + show(p).replace("·", "and") + " to Figure 1.");
+    },
+    onBlur() { $("m-here").textContent = "—"; },
   });
 
   function regrow() {
@@ -186,8 +199,8 @@ const dish = (() => {
   sim.onrestore = regrow;
   onPaletteChange(() => requestAnimationFrame(() => sim.draw()));
 
-  function frame() {
-    if (visible && !done && !sim.lost) {
+  animate(canvas, () => {
+    if (!done && !sim.lost) {
       sim.step(Math.min(STEPS, CAP - sim.steps));
       done = sim.steps >= CAP;
       // With reduced motion, show only the finished map rather than the growth.
@@ -195,12 +208,9 @@ const dish = (() => {
       status.textContent = done ? "settled" : (reduceMotion ? "computing " : "growing ") +
         Math.round((100 * sim.steps) / CAP) + "%";
     }
-    requestAnimationFrame(frame);
-  }
+  });
 
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(canvas);
   regrow();
-  frame();
 }
 
 /* ---------------- Figure 3: one dimension, two speeds ---------------- */
@@ -216,7 +226,7 @@ const dish = (() => {
   const slider = $("ratio");
   let a = new Float64Array(N), h = new Float64Array(N);
   let a2 = new Float64Array(N), h2 = new Float64Array(N);
-  let running = false, visible = false, started = false;
+  let running = false, started = false;
   let pal = readPalette();
 
   const ratio = () => +slider.value;
@@ -302,23 +312,20 @@ const dish = (() => {
   onPaletteChange(() => { pal = readPalette(); draw(); });
   window.addEventListener("resize", draw);
 
+  valueText(slider, (v) => v + " times faster than the activator");
+
   let frameNo = 0;
-  function frame() {
-    if (visible && running) {
+  animate(canvas, () => {
+    if (running) {
       advance(PER_FRAME);
       draw();
       if (++frameNo % 6 === 0) stats();
     }
-    requestAnimationFrame(frame);
-  }
-
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible && !started && !reduceMotion) { started = true; setRun(true); }
-  }).observe(canvas);
+  }, (shown) => {
+    if (shown && !started && !reduceMotion) { started = true; setRun(true); }
+  });
 
   setRun(false);
   stir();
   if (reduceMotion) settle(); else { draw(); stats(); }
-  frame();
 }

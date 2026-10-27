@@ -1,7 +1,6 @@
 import { Flock, Vicsek } from "/assets/boids.js";
 import { readPalette, onPaletteChange, css } from "/assets/palette.js";
-
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+import { reduceMotion, onShown, valueText, keyCursor } from "/assets/a11y.js";
 const $ = (id) => document.getElementById(id);
 let pal = readPalette();
 const redraws = [];
@@ -20,12 +19,12 @@ function fit(canvas) {
 
 const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 
-// Run `tick` each frame only while the element is on screen and `isOn()` holds.
+// Run `tick` each frame only while the element is on screen, the tab is visible and `isOn()` holds.
 function loop(el, tick, isOn) {
   let visible = false, raf = 0;
   const run = () => { raf = 0; if (!visible || !isOn()) return; tick(); raf = requestAnimationFrame(run); };
   const kick = () => { if (!raf && visible && isOn()) raf = requestAnimationFrame(run); };
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; kick(); }).observe(el);
+  onShown(el, (shown) => { visible = shown; kick(); });
   return kick;
 }
 
@@ -84,6 +83,15 @@ function loop(el, tick, isOn) {
   canvas.addEventListener("pointerup", up);
   canvas.addEventListener("pointercancel", up);
   canvas.addEventListener("pointerleave", () => { if (!down) flock.predator = null; });
+
+  // Keyboard: while the flock has focus, the arrow keys move the predator.
+  const kbPredator = (x, y) => { flock.predator = { x: x * S, y: y * S }; if (!playing) draw(); };
+  keyCursor(canvas, {
+    step: 1 / 40,
+    onFocus(x, y) { if (canvas.matches(":focus-visible")) kbPredator(x, y); },
+    onMove: kbPredator,
+    onBlur() { if (!down) { flock.predator = null; if (!playing) draw(); } },
+  });
 
   function stats() {
     $("f-order").textContent = flock.order().toFixed(2);
@@ -195,6 +203,7 @@ function loop(el, tick, isOn) {
   const readEta = () => { model.eta = +slider.value; $("eta-v").textContent = model.eta.toFixed(2); };
   slider.addEventListener("input", readEta);
   readEta();
+  valueText(slider, (v) => `${(+v).toFixed(2)}: random turns of up to ${Math.round((v / (2 * Math.PI)) * 180)} degrees either way`);
 
   function setPlay(on) {
     playing = on;
@@ -281,6 +290,8 @@ function loop(el, tick, isOn) {
   }, () => playing);
 
   record();
+  // With reduced motion, open on particles that have already lined up, with a history to match.
+  if (reduceMotion) for (let i = 0; i < 300; i++) { model.step(); model.step(); record(); }
   setPlay(playing);
   drawAll();
 }
