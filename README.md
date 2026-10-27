@@ -1,6 +1,6 @@
 # Emergence — a field guide
 
-Interactive essays about simple local rules that build large structure. Live at zansen.dev.
+Interactive essays about simple local rules that build large structure. Live at emergence.zansen.dev.
 
 Plain static HTML, CSS and ES modules. No build step, no dependencies, no tracking.
 
